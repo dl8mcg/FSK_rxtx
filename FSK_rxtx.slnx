@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Projektmappenelemente/" />
+  <Project Path="FSK_rxtx/FSK_rxtx.vcxproj" Id="87a1472a-960a-40e0-87ca-ed1970db36f9" />
+</Solution>
