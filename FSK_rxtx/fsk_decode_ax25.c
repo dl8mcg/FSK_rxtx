@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 ... Feb 2026  2FSK AX25 - Decoder 
+*   by dl8mcg Jan. 2025 ... März 2026      2FSK - AX25 - Decoder 
 */
 
 #include <stdlib.h>
@@ -14,6 +14,7 @@
 static void stateFrame00();
 static void stateFrame01();
 static void stateFrame02();
+static void stateFrame03();
 static void stateFrame1();
 static void stateFrame2();
 static void (*smFrame)() = stateFrame00;
@@ -33,6 +34,13 @@ static uint8_t onecnt = 0;
 static bool    rxbit = false;
 
 static uint16_t current_crc = 0xFFFF;
+
+
+// Puffer für verzögerte Ausgabe von 2 Bytes (Pipeline)
+static uint8_t delay1 = 0;
+static uint8_t delay2 = 0;
+static uint8_t delay_count = 0;
+
 
 static inline uint16_t update_crc(uint16_t crc, uint8_t data) 
 {
@@ -128,6 +136,25 @@ void stateFrame02()          // Warte auf das dritte Flag (0x7E), direkt anschli
         if (raw_shift_reg == 0x7E)
         {
             bitcnt = 0;
+            smFrame = stateFrame03;
+        }
+        else
+        {
+            bitcnt = 0;
+            smFrame = stateFrame00;   // Kein Flag → zurücksetzen
+        }
+    }
+}
+
+void stateFrame03()          // Warte auf das dritte Flag (0x7E), direkt anschließend
+{
+    bitcnt++;
+
+    if (bitcnt == 8)
+    {
+        if (raw_shift_reg == 0x7E)
+        {
+            bitcnt = 0;
             smFrame = stateFrame1;
         }
         else
@@ -153,6 +180,9 @@ void stateFrame1()          // Flag empfangen – warte auf erstes Nutzdaten-Byt
 
     current_crc = 0xFFFF;
     // Erstes vollständiges Datenbyte nach dem Flag
+
+    writebuf('\n');
+
     bitcnt = 0;
     smContent = stateContent0;
     smContent();            // Byte verarbeiten
@@ -164,14 +194,28 @@ void stateFrame2()          // Nutzdaten empfangen
     // Flag erkannt → End-Flag (bzw. nächster Frame beginnt)
     if (raw_shift_reg == 0x7E)
     {
-        if (current_crc == 0x1D0F)
-            printf("\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
-        else
-            printf("\n[CRC ERROR] (CRC: 0x%04X)\n", current_crc);
-
         bitcnt = 0;
-        smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
-        return;
+		smContent = stateContent0;  // Content-State-Machine zurücksetzen für nächsten Frame
+        delay_count = 0;
+        delay1 = 0;
+        delay2 = 0;
+
+        if (current_crc == 0x1D0F)
+        {
+            printf("\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
+            smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
+            return;
+        }
+        else
+        {
+            printf("\n[CRC ERROR] (CRC: 0x%04X)\n", current_crc);
+            smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
+            return;
+        }
+
+        //bitcnt = 0;
+        //smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
+        //return;
     }
 
     bitcnt++;
@@ -189,10 +233,15 @@ void stateFrame2()          // Nutzdaten empfangen
 void stateContent0()        // Adressfelder: Zeichen sind um 1 Bit nach links geshiftet
 {
     current_crc = update_crc(current_crc, rxbyte);
-    writebuf(rxbyte >> 1);
+    writebuf(rxbyte >> 1);  //writebuf('X');
 
     if (rxbyte & 0x01)      // LSB gesetzt → letztes Adressbyte
+    {
+        writebuf('\n');
         smContent = stateContent1;
+    }
+
+	delay_count = 0;        // Pipeline zurücksetzen
 }
 
 void stateContent1()        // Control-Byte
@@ -208,19 +257,57 @@ void stateContent1()        // Control-Byte
         smContent = stateContent3;  // S-Frame → direkt Info/Ende
         return;
     }
-    smContent = stateContent3;      // U-Frame
+    smContent = stateContent2;      // U-Frame
 }
 
-void stateContent2()        // PID-Byte (nur bei I-Frames)
+void stateContent2()        // PID-Byte (nur bei I-Frames und UI-Frames)
 {
     current_crc = update_crc(current_crc, rxbyte);
     smContent = stateContent3;
 }
 
+//void stateContent3()        // Info-Feld: Nutzdaten ausgeben
+//{
+//    current_crc = update_crc(current_crc, rxbyte);
+//    writebuf(rxbyte);
+//}
+
+
 void stateContent3()        // Info-Feld: Nutzdaten ausgeben
 {
     current_crc = update_crc(current_crc, rxbyte);
-    writebuf(rxbyte);
+
+    if (delay_count < 2)
+    {
+        if (delay_count == 0) delay1 = rxbyte;
+        else delay2 = rxbyte;
+        delay_count++;
+        return;
+    }
+
+    // ältestes Byte ausgeben
+    writebuf(delay1);
+
+    // Pipeline weiterschieben
+    delay1 = delay2;
+    delay2 = rxbyte;
 }
 
 
+
+
+
+
+//// In stateFrame2(), statt printf:
+//if (current_crc == 0x1D0F)
+//{
+//    char msg[40];
+//    snprintf(msg, sizeof(msg), "\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
+//    for (char* p = msg; *p; p++) writebuf(*p);
+//}
+//else
+//{
+//    char msg[40];
+//    snprintf(msg, sizeof(msg), "\n[CRC ERROR] (CRC: 0x%04X)\n", current_crc);
+//    for (char* p = msg; *p; p++) writebuf(*p);
+//}

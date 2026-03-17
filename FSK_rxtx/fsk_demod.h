@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025
+*   by dl8mcg Jan. 2025 .. Feb. 2026
 */
 
 #pragma once
@@ -18,6 +18,7 @@ typedef enum
 } FskMode;
 
 extern volatile int demod_bit;
+//extern static int demod_bit;
 
 void init_fsk_demod(FskMode mode);
 void process_fsk_demodulation(float sample);

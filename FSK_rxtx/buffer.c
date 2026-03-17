@@ -1,13 +1,11 @@
 /*
-*   by dl8mcg Jan. 2025       ASCII - decode
+*   by dl8mcg Jan. 2025 .. März 2026       Ringbuffer für dekodierte Zeichen
 */
 
 #include "buffer.h"
 
-
-
-#define RINGBUFFER_SIZE 1024 //256  // Größe des Buffers 
-#define BUFFER_SIZE 1024 //256  // Größe des temporären Puffers
+#define RINGBUFFER_SIZE 1024        // Größe des Buffers 
+#define BUFFER_SIZE 1024            // Größe des temporären Puffers
 
 char ringbuffer[RINGBUFFER_SIZE];
 volatile uint16_t write_index = 0;  // Schreibzeiger 
@@ -22,19 +20,6 @@ void writeToRingBuffer(const char* text)
     }
 }
 
-
-//void writeToRingBufferFormatted(const char* format, unsigned char resbyte) 
-//{
-//    char buffer[100];  // Lokaler Buffer für formatierten String
-//    sprintf_s(buffer, sizeof(buffer), format, resbyte);  // String formatieren
-//
-//    int size = strlen(buffer);
-//    for (int i = 0; i < size; i++) {
-//        writebuf(buffer[i]);  // Zeichenweise in den Ringpuffer schreiben
-//    }
-//}
-
-
 void writeToRingBufferFormatted(const char* format, ...)
 {
     char buffer[BUFFER_SIZE];  // Temporärer Puffer für den formatierten String
@@ -42,12 +27,12 @@ void writeToRingBufferFormatted(const char* format, ...)
     va_start(args, format);    // Initialisiere Argument-Liste
 
     vsnprintf(buffer, BUFFER_SIZE, format, args);  // String formatieren
-    va_end(args);  // Beende Argumentverarbeitung
+    va_end(args);               // Beende Argumentverarbeitung
 
     int size = strlen(buffer);
     for (int i = 0; i < size; i++)
     {
-        writebuf(buffer[i]);  // Zeichenweise in den Ringpuffer schreiben
+        writebuf(buffer[i]);    // Zeichenweise in den Ringpuffer schreiben
     }
 }
 

@@ -147,6 +147,7 @@
     <ClInclude Include="fsk_decode_efr.h" />
     <ClInclude Include="fsk_decode_rtty.h" />
     <ClInclude Include="fsk_demod.h" />
+    <ClInclude Include="fsk_tone_filters.h" />
     <ClInclude Include="sampleprocessing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

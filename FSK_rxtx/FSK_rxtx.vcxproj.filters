@@ -65,5 +65,8 @@
     <ClInclude Include="sampleprocessing.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="fsk_tone_filters.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

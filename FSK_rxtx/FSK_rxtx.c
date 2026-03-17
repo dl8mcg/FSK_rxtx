@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Feb. 2026
+*   by dl8mcg Jan. 2025 to März 2026       Hauptprogramm
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,16 +20,10 @@
 int main()
 {
     setlocale(LC_ALL, "de_DE.UTF-8");
-
-    wprintf(L"                      RYTL TYTL                                       by dl8mcg 2026\n\n");
-
+    wprintf(L"                      RYTL - TYTL                                      by dl8mcg 2026\n\n");
     wprintf(L"Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n");
-
     initialize_audiostream(); 
-
     init_fsk_demod(FSK_RTTY_45_BAUD_170Hz);
-
-    //init_fsk_demod(FSK_ASCII_300_BAUD_850Hz);
 
     while (1)
     {

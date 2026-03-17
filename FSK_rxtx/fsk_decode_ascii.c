@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025       ASCII - decode
+*   by dl8mcg Jan. 2025 .. März 2026       2FSK - ASCII - Decoder
 */
 
 #include <stdint.h>

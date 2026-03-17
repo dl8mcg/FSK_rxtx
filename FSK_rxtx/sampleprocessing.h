@@ -1,3 +1,7 @@
+/*
+*   by dl8mcg Jan. 2025 .. Feb. 2026
+*/
+
 #pragma once
 
 #ifndef AUDIOSTREAM_H

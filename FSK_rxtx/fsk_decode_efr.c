@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025       EFR - decode
+*   by dl8mcg Jan. 2025 .. März 2026       2FSK - EFR - Decoder
 */
 
 #include <stdint.h>

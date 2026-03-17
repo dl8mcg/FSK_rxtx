@@ -1,6 +1,5 @@
-﻿/*
-*   by dl8mcg Jan. 2025 .. Feb. 2026
-*   DPLL Bitclock Version
+/*
+*   by dl8mcg Jan. 2025 to März 2026       FSK-demodulator
 */
 
 #include <stdint.h>
@@ -14,255 +13,258 @@
 #include "fsk_decode_ax25.h"
 #include "fsk_decode_efr.h"
 
-static void (*smMode)(uint8_t) = process_ascii;      // Initialzustand
+static void (*smMode)(uint8_t) = process_rtty;    
 
-// -------------------------------------------------
-// Tone NCO
-// -------------------------------------------------
-volatile double nco_phase_low = 0.0f;
-volatile double nco_phase_high = 0.0f;
-double nco_step_low = 0.0f;
-double nco_step_high = 0.0f;
+// ------------------------------------------------------------
+// NCO
+// ------------------------------------------------------------
 
-double baud_rate = 300.0f;
+static float nco_phase = 0.0f;
+static float nco_step = 0.0f;
 
-// -------------------------------------------------
-// Bit Clock DPLL (NEU)
-// -------------------------------------------------
-volatile double bit_phase = 0.0f;     // 0 … 1
-volatile double bit_freq = 0.0f;
-double bit_freq_nom = 0.0f;
+// ------------------------------------------------------------
+// I/Q LPF
+// ------------------------------------------------------------
 
-double pll_alpha = 0.02f;   // proportional
-double pll_beta = 0.0005f;  // integral
+static float lpf_alpha = 0.05f;
 
-volatile double pll_integrator = 0.0f;
+static float i1 = 0, i2 = 0, i3 = 0, i4 = 0;
+static float q1 = 0, q2 = 0, q3 = 0, q4 = 0;
 
-// -------------------------------------------------
-// Moving Average Filter (Matched Filter)
-// -------------------------------------------------
-#define MA_MAX_LEN 2048 // Reicht locker für 45 Baud @ 44.1kHz (ca. 970 Samples)
+// ------------------------------------------------------------
+// discriminator
+// ------------------------------------------------------------
 
-static double i_low_buf[MA_MAX_LEN] = { 0 };
-static double q_low_buf[MA_MAX_LEN] = { 0 };
-static double i_high_buf[MA_MAX_LEN] = { 0 };
-static double q_high_buf[MA_MAX_LEN] = { 0 };
+static float prev_i = 0;
+static float prev_q = 0;
 
-static double i_low_sum = 0.0f;
-static double q_low_sum = 0.0f;
-static double i_high_sum = 0.0f;
-static double q_high_sum = 0.0f;
+static float freq;
+static float freq_filt = 0;
+static float freq_alpha = 0.2f;
 
-static int ma_idx = 0;
-static int ma_len = 1; // Wird in der Init-Routine berechnet
+static float freq_cnt = 0;
 
-// -------------------------------------------------
-// Synchronisation
-// -------------------------------------------------
-volatile double amplitude_low = 0;
-volatile double amplitude_high = 0;
 
-volatile int bit_value = -1;
-volatile int previous_bit_value = -1;
-volatile int demod_bit = 0;
+static float prev_freq_filt = 0;
 
-// =================================================
-// Haupt-Demodulationsroutine
-// =================================================
+// ------------------------------------------------------------
+// bit clock
+// ------------------------------------------------------------
+
+static float baud_rate;
+
+static float samples_per_bit;
+static float samples_per_half_bit;
+
+static float bit_timer = 0;
+
+// ------------------------------------------------------------
+
+static int bit_value = 0;
+static int previous_bit_value = 0;
+
+volatile bool inverse_fsk = false; 
+
+
+// ------------------------------------------------------------
+// main processing
+// ------------------------------------------------------------
+
 void process_fsk_demodulation(float sample)
 {
-    // 1. NCO & Mischen 
-    nco_phase_low += nco_step_low;
-    if (nco_phase_low > 2 * (float)M_PI) nco_phase_low -= 2 * (float)M_PI;
-    nco_phase_high += nco_step_high;
-    if (nco_phase_high > 2 * (float)M_PI) nco_phase_high -= 2 * (float)M_PI;
+    // -----------------------------
+    // NCO
+    // -----------------------------
 
-    double i_sample_low = sample * cosf(nco_phase_low);
-    double q_sample_low = sample * sinf(nco_phase_low);
-    double i_sample_high = sample * cosf(nco_phase_high);
-    double q_sample_high = sample * sinf(nco_phase_high);
+    nco_phase += nco_step;
 
-    // 2. Moving Average 
-    i_low_sum -= i_low_buf[ma_idx];
-    q_low_sum -= q_low_buf[ma_idx];
-    i_high_sum -= i_high_buf[ma_idx];
-    q_high_sum -= q_high_buf[ma_idx];
+    if (nco_phase > 2 * M_PI)
+        nco_phase -= 2 * M_PI;
 
-    i_low_buf[ma_idx] = i_sample_low;
-    q_low_buf[ma_idx] = q_sample_low;
-    i_high_buf[ma_idx] = i_sample_high;
-    q_high_buf[ma_idx] = q_sample_high;
+    float lo_i = cosf(nco_phase);
+    float lo_q = sinf(nco_phase);
 
-    i_low_sum += i_sample_low;
-    q_low_sum += q_sample_low;
-    i_high_sum += i_sample_high;
-    q_high_sum += q_sample_high;
+    // -----------------------------
+    // mixer
+    // -----------------------------
 
-    if (++ma_idx >= ma_len) ma_idx = 0;
+    float mix_i = sample * lo_i;
+    float mix_q = sample * lo_q;
 
-    double i_low_filt = i_low_sum / ma_len;
-    double q_low_filt = q_low_sum / ma_len;
-    double i_high_filt = i_high_sum / ma_len;
-    double q_high_filt = q_high_sum / ma_len;
+    // -----------------------------
+    // I/Q lowpass (4 pole IIR)
+    // -----------------------------
 
-    amplitude_low = sqrtf(i_low_filt * i_low_filt + q_low_filt * q_low_filt);
-    amplitude_high = sqrtf(i_high_filt * i_high_filt + q_high_filt * q_high_filt);
+    i1 += lpf_alpha * (mix_i - i1);
+    q1 += lpf_alpha * (mix_q - q1);
 
-    double baseband = amplitude_high - amplitude_low;
-    double hysteresis = 0.05f * (amplitude_high + amplitude_low);
+    i2 += lpf_alpha * (i1 - i2);
+    q2 += lpf_alpha * (q1 - q2);
 
-    if (baseband > hysteresis) bit_value = 1;
-    else if (baseband < -hysteresis) bit_value = 0;
+    i3 += lpf_alpha * (i2 - i3);
+    q3 += lpf_alpha * (q2 - q3);
 
-    // --- 1. Bit Clock NCO ---
-    bit_phase += bit_freq;
+    i4 += lpf_alpha * (i3 - i4);
+    q4 += lpf_alpha * (q3 - q4);
 
-    if (bit_phase >= 1.0f)
+    // -----------------------------
+    // frequency discriminator
+    // -----------------------------
+
+    freq = i4 * prev_q - q4 * prev_i;
+
+    prev_i = i4;
+    prev_q = q4;
+
+    // ------------
+    // smoothing
+    // ------------
+
+    freq_filt += freq_alpha * (freq - freq_filt);
+
+    // ------------------------------------------------------------------------------
+	// sum up low (negative) and high (positive) frequencies to stable bit decision
+    // ------------------------------------------------------------------------------
+
+    if (freq_filt < 0)
     {
-        bit_phase -= 1.0f;
-        demod_bit = bit_value;
-        smMode(demod_bit);
+        freq_cnt--;
     }
-
-    // --- 2. DPLL Logik  ---
-    if (previous_bit_value == -1)
+    else
     {
-        previous_bit_value = bit_value;
-        return;
+        freq_cnt++;
     }
+        
+    // -------------
+    // bit decision
+    // -------------
+
+    bit_value = (freq_filt > 0);
+
+    //-----------------------------------------------
+    // edge detector , mögliche Bitwechsel reduziert
+    //-----------------------------------------------
 
     if (bit_value != previous_bit_value)
     {
-        // Regeln auf 0.5 (Bit-Mitte)!
-        // Da das MA-Filter 0.5 Bits Verzögerung hat, ist die Flanke 
-        // im Basisband exakt der ideale Zeitpunkt für die Phasen-Mitte.
-        double phase_error = bit_phase - 0.5f;
-        
-        // Wrap-around ist hier wichtig
-        if (phase_error > 0.5f) phase_error -= 1.0f;
-        if (phase_error < -0.5f) phase_error += 1.0f;
+        if (bit_timer < samples_per_bit * 0.75f)
+        {
+            bit_timer = samples_per_half_bit;
+            freq_cnt = 0;
+            previous_bit_value = bit_value;   
+        }
+    }
 
-        double error_limit = 0.10f;
-        double clamped_error = (phase_error > error_limit) ? error_limit : (phase_error < -error_limit) ? -error_limit : phase_error;
+    // -----------------------------
+    // bit sampler
+    // -----------------------------
 
-        // Korrektur
-        bit_phase -= pll_alpha * clamped_error;
-        pll_integrator -= pll_beta * clamped_error;
-        
-        // Sicherheits-Limit (sehr wichtig gegen Davonlaufen!)
-        double max_dev = bit_freq_nom * 0.01f;
-        if (pll_integrator > max_dev) pll_integrator = max_dev;
-        if (pll_integrator < -max_dev) pll_integrator = -max_dev;
+    if (--bit_timer <= 0)
+    {
+        bit_timer = samples_per_bit;
 
-        bit_freq = bit_freq_nom + pll_integrator;
+        if (inverse_fsk)
+        {
 
-        previous_bit_value = bit_value;
+            if (freq_cnt < 0)
+                smMode(1);
+            else
+                smMode(0);
+        }
+        else
+        {
+            if (freq_cnt > 0)
+                smMode(1);
+            else
+                smMode(0);
+        }
+        freq_cnt = 0;
     }
 }
 
-// =================================================
-// Initialisierung
-// =================================================
+// -----------------------------
+// Init mode specific parameters
+// -----------------------------
+
 void init_fsk_demod(FskMode mode)
 {
-    double flow;
-    double fhigh;
+    float flow;
+    float fhigh;
 
     switch (mode)
     {
-    case FSK_RTTY_45_BAUD_170Hz:
-        baud_rate = 45.454545f;
-        pll_alpha = 0.015f;
-        pll_beta = 0.0003f;
-        flow = 2125.0f;
-        fhigh = 2295.0f;
-        smMode = process_rtty;
-        wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
-        break;
+        case FSK_RTTY_45_BAUD_170Hz:
+            baud_rate = 45.454545f;
+            lpf_alpha = 0.04f;
+            flow = 2125.0f;
+            fhigh = 2295.0f;
+            inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
+            smMode = process_rtty_uos;
+            wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz  set rx to usb\n\n\n\n", flow, fhigh);
+            break;
 
-    case FSK_RTTY_50_BAUD_85Hz:
-        baud_rate = 50.0f;
-        pll_alpha = 0.015f;
-        pll_beta = 0.0003f;
-        flow = 1957.5f;
-        fhigh = 2042.5f;
-        smMode = process_rtty;
-        wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   147,3 kHz\n\n", flow, fhigh);
-        break;
+        case FSK_RTTY_50_BAUD_85Hz:
+            baud_rate = 50.0f;
+            lpf_alpha = 0.021f;
+            flow = 1957.5f;
+            fhigh = 2042.5f;
+            inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
+            smMode = process_rtty;
+            wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   f = 147,3 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
+            break;
 
-    case FSK_RTTY_50_BAUD_450Hz:
-        baud_rate = 50.0f;
-        pll_alpha = 0.015f;
-        pll_beta = 0.0003f;
-        flow = 1775.0f;
-        fhigh = 2225.0f;
-        smMode = process_rtty;
-        wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   4583 kHz  7646 kHz  10100,8 kHz  11039 kHz  14467,3 kHz\n\n", flow, fhigh);
-        break;
+        case FSK_RTTY_50_BAUD_450Hz:
+            baud_rate = 50.0f;
+            lpf_alpha = 0.06f;
+            flow = 1775.0f;
+            fhigh = 2225.0f;
+            inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
+            smMode = process_rtty;
+            wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   f = 4583 kHz, 7646 kHz, 10100.8 kHz, 11039 kHz, 14467.3 kHz  set rx to f - 2kHz usb\n\n", flow, fhigh);
+            break;
 
-    case FSK_EFR_200_BAUD_340Hz:
-        baud_rate = 200.0f;
-        pll_alpha = 0.02f;
-        pll_beta = 0.0005f;
-        flow = 1830.0f;
-        fhigh = 2170.0f;
-        smMode = process_efr;
-        wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   129,1 kHz  139 kHz  135,6 kHz\n\n", flow, fhigh);
-        break;
+        case FSK_EFR_200_BAUD_340Hz:
+            baud_rate = 200.0f;
+            lpf_alpha = 0.04f;
+            flow = 1830.0f;
+            fhigh = 2170.0f;
+            inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
+            smMode = process_efr;
+            wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   129,1 kHz  139 kHz  135,6 kHz\n\n", flow, fhigh);
+            break;
 
-    case FSK_ASCII_300_BAUD_850Hz:
-        baud_rate = 300.0f;
-        pll_alpha = 0.02f;
-        pll_beta = 0.0005f;
-        flow = 1275.0f;
-        fhigh = 2125.0f;
-        smMode = process_ascii;
-        wprintf(L"\n\nModus FSK_ASCII_300_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
-        break;
+        case FSK_ASCII_300_BAUD_850Hz:
+            baud_rate = 300.0f;
+            lpf_alpha = 0.064f;
+            flow = 1275.0f;
+            fhigh = 2125.0f;
+            inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
+            smMode = process_ascii;
+            wprintf(L"\n\nModus FSK_ASCII_300_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
+            break;
 
-    case FSK_AX25_1200_BAUD_1000Hz:
-        baud_rate = 1200.0f;
-        pll_alpha = 0.03f;
-        pll_beta = 0.0008f;
-        flow = 1200.0f;
-        fhigh = 2200.0f;
-        smMode = process_ax25;
-        wprintf(L"\n\nModus FSK_AX25_1200_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
-        break;
+        case FSK_AX25_1200_BAUD_1000Hz:
+            baud_rate = 1200.0f;
+            lpf_alpha = 0.1075f;
+            flow = 1200.0f;
+            fhigh = 2200.0f;
+            inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
+            smMode = process_ax25;
+            wprintf(L"\n\nModus FSK_AX25_1200_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
+            break;
 
-    default:
-        printf("Ungültiger FSK-Modus.\n");
-        return;
+        default:
+            printf("Ungültiger FSK-Modus.\n");
+            return;
     }
 
-    nco_step_low = 2 * (double)M_PI * flow / SAMPLING_RATE;
-    nco_step_high = 2 * (double)M_PI * fhigh / SAMPLING_RATE;
+    nco_step = 2 * (float)M_PI * (flow + (fhigh - flow) / 2) / SAMPLING_RATE;
+    samples_per_bit = SAMPLING_RATE / baud_rate;
+    samples_per_half_bit = samples_per_bit / 2;
 
-    bit_freq_nom = baud_rate / SAMPLING_RATE;
-    bit_freq = bit_freq_nom;
-    bit_phase = 0.0f;
-    pll_integrator = 0.0f;
-    previous_bit_value = -1;
+    freq_alpha = lpf_alpha;
 
-    // ---------------------------------------------
-    // Moving Average Filter initialisieren
-    // ---------------------------------------------
-    // Die Länge entspricht genau der Dauer eines Bits in Samples
-    ma_len = (int)(SAMPLING_RATE / baud_rate);
-
-    // Sicherheit-Check
-    if (ma_len > MA_MAX_LEN) ma_len = MA_MAX_LEN;
-    if (ma_len < 1) ma_len = 1;
-
-    ma_idx = 0;
-    i_low_sum = 0.0f; q_low_sum = 0.0f;
-    i_high_sum = 0.0f; q_high_sum = 0.0f;
-
-    for (int i = 0; i < MA_MAX_LEN; i++) 
-    {
-        i_low_buf[i] = 0.0f;
-        q_low_buf[i] = 0.0f;
-        i_high_buf[i] = 0.0f;
-        q_high_buf[i] = 0.0f;
-    }
 }
+
+
+
