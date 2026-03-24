@@ -179,8 +179,8 @@ void stateFrame1()          // Flag empfangen – warte auf erstes Nutzdaten-Byt
         return;
 
     current_crc = 0xFFFF;
-    // Erstes vollständiges Datenbyte nach dem Flag
 
+    // Erstes vollständiges Datenbyte nach dem Flag
     writebuf('\n');
 
     bitcnt = 0;
@@ -203,7 +203,7 @@ void stateFrame2()          // Nutzdaten empfangen
         if (current_crc == 0x1D0F)
         {
             printf("\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
-            smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
+            smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
             return;
         }
         else
@@ -212,10 +212,6 @@ void stateFrame2()          // Nutzdaten empfangen
             smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
             return;
         }
-
-        //bitcnt = 0;
-        //smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
-        //return;
     }
 
     bitcnt++;
@@ -266,13 +262,6 @@ void stateContent2()        // PID-Byte (nur bei I-Frames und UI-Frames)
     smContent = stateContent3;
 }
 
-//void stateContent3()        // Info-Feld: Nutzdaten ausgeben
-//{
-//    current_crc = update_crc(current_crc, rxbyte);
-//    writebuf(rxbyte);
-//}
-
-
 void stateContent3()        // Info-Feld: Nutzdaten ausgeben
 {
     current_crc = update_crc(current_crc, rxbyte);
@@ -292,22 +281,3 @@ void stateContent3()        // Info-Feld: Nutzdaten ausgeben
     delay1 = delay2;
     delay2 = rxbyte;
 }
-
-
-
-
-
-
-//// In stateFrame2(), statt printf:
-//if (current_crc == 0x1D0F)
-//{
-//    char msg[40];
-//    snprintf(msg, sizeof(msg), "\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
-//    for (char* p = msg; *p; p++) writebuf(*p);
-//}
-//else
-//{
-//    char msg[40];
-//    snprintf(msg, sizeof(msg), "\n[CRC ERROR] (CRC: 0x%04X)\n", current_crc);
-//    for (char* p = msg; *p; p++) writebuf(*p);
-//}
