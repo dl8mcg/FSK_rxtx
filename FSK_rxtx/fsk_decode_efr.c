@@ -232,7 +232,7 @@ static void stateprot10(uint8_t resbyte)
         if ((okflag == true) && (lenuserdata == 0x0a))
         {
             //wprintf(L"date : %02d:%02d:%02d    time : %02d:%02d:%02d \n\n", databuf[4]&0x1F, databuf[5], databuf[6], databuf[3], databuf[2], databuf[1] / 4);
-            writeToRingBufferFormatted("date : %02d:%02d:%02d    time : %02d:%02d:%02d \n\n", databuf[4] & 0x1F, databuf[5], databuf[6], databuf[3], databuf[2], databuf[1] / 4);
+            writeToRingBufferFormatted("date : %02d.%02d.%02d    time : %02d:%02d:%02d \n\n", databuf[4] & 0x1F, databuf[5], databuf[6], databuf[3], databuf[2], databuf[1] / 4);
         }
     }
     else

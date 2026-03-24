@@ -233,7 +233,7 @@ void init_fsk_demod(FskMode mode)
         fhigh = 2170.0f;
         inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
         smMode = process_efr;
-        wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   129,1 kHz  139 kHz  135,6 kHz\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   129,1 kHz  139 kHz  135,6 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
         break;
 
     case FSK_ASCII_300_BAUD_850Hz:
