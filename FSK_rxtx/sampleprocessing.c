@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 .. März 2026       sample processing
+*   by dl8mcg Jan. 2025 to April 2026       sample processing
 */
 
 #include <portAudio.h>
@@ -59,13 +59,13 @@ int initialize_audiostream()
         return 1;
     }
 
-    printf("Verfügbare Geräte:\n");
-    for (int i = 0; i < numDevices; i++)
-    {
-        const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
-        printf("[%d] Name: %s, Eingabekanäle: %d, Ausgabekanäle: %d\n",
-            i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
-    }
+    //printf("Verfügbare Geräte:\n");
+    //for (int i = 0; i < numDevices; i++)
+    //{
+    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
+    //    printf("[%d] Name: %s, Eingabekanäle: %d, Ausgabekanäle: %d\n",
+    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
+    //}
 
     // Versuche Default-Devices zuerst
     int inputDevice = Pa_GetDefaultInputDevice();
@@ -78,7 +78,11 @@ int initialize_audiostream()
         for (int i = 0; i < numDevices; i++)
         {
             const PaDeviceInfo* di = Pa_GetDeviceInfo(i);
-            if (di && di->maxInputChannels > 0) { inputDevice = i; break; }
+            if (di && di->maxInputChannels > 0) 
+            { 
+                inputDevice = i; 
+                break;
+            }
         }
     }
     if (outputDevice == paNoDevice)
@@ -87,7 +91,11 @@ int initialize_audiostream()
         for (int i = 0; i < numDevices; i++)
         {
             const PaDeviceInfo* di = Pa_GetDeviceInfo(i);
-            if (di && di->maxOutputChannels > 0) { outputDevice = i; break; }
+            if (di && di->maxOutputChannels > 0) 
+            { 
+                outputDevice = i; 
+                break; 
+            }
         }
     }
 
@@ -160,7 +168,7 @@ int initialize_audiostream()
         return 1;
     }
 
-    printf("Audio-Streaming läuft... Drücke Enter zum Beenden.\n");
+    //printf("Audio-Streaming läuft... Drücke Enter zum Beenden.\n");
     return 0;
 }
 

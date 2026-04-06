@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 .. März 2026       Ringbuffer für dekodierte Zeichen
+*   by dl8mcg Jan. 2025 to April 2026       Ringbuffer für dekodierte Zeichen
 */
 
 #include "buffer.h"

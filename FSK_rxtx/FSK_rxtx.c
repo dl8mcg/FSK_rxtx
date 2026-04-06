@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to März 2026       Hauptprogramm
+*   by dl8mcg Jan. 2025 to April 2026       Hauptprogramm
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +19,8 @@
 
 int main()
 {
-    setlocale(LC_ALL, "de_DE.UTF-8");
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
     wprintf(L"                      RYTL - TYTL                                      by dl8mcg 2026\n\n");
     wprintf(L"Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n");
     initialize_audiostream(); 
@@ -71,10 +72,20 @@ int main()
             }
         }
 
-        char value;
+        unsigned char value;
         if (readbuf(&value))
         {
-            wprintf(L"%c", value);
+            if (value < 0x80)
+            {
+				putchar(value);                  // unverändert ausgeben, da es sich um ein ASCII-Zeichen handelt (1-Byte UTF‑8-Sequenz)
+            }
+            else
+            {
+				putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
+				putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
+            }
+
+
         }
 
     }

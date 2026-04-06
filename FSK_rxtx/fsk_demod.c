@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to März 2026       FSK-demodulator
+*   by dl8mcg Jan. 2025 to April 2026       FSK-demodulator
 */
 
 #include <stdint.h>
@@ -144,6 +144,8 @@ void process_fsk_demodulation(float sample)
         freq_cnt++;
     }
 
+	//freq_cnt += freq_filt; // accumulate floating point frequency values for bit decision
+
     // -------------
     // bit decision
     // -------------
@@ -172,6 +174,10 @@ void process_fsk_demodulation(float sample)
 
     if (bit_timer <= 0) 
     {
+
+        //wprintf(L"%g\n", freq_cnt);
+
+
         float x_now = freq_filt;                    // aktuelles Symbol
         float e = (x_now - mm_prev) * mm_half;      // Timing Error (Mueller-Müller)
         bit_timer += samples_per_bit + mm_mu * e;   // Timing-Korrektur
@@ -213,7 +219,7 @@ void init_fsk_demod(FskMode mode)
         fhigh = 2042.5f;
         inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
         smMode = process_rtty;
-        wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   f = 147,3 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_RTTY_50_BAUD  %g Hz / %g Hz   f = 147.3 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
         break;
 
     case FSK_RTTY_50_BAUD_450Hz:
@@ -233,7 +239,7 @@ void init_fsk_demod(FskMode mode)
         fhigh = 2170.0f;
         inverse_fsk = true; // Inverse FSK (mark = low frequency, space = high frequency)
         smMode = process_efr;
-        wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   129,1 kHz  139 kHz  135,6 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_EFR_200_BAUD  %g Hz / %g Hz   f = 129.1 kHz  139 kHz  135.6 kHz   set rx to f - 2kHz usb\n\n", flow, fhigh);
         break;
 
     case FSK_ASCII_300_BAUD_850Hz:
@@ -243,7 +249,7 @@ void init_fsk_demod(FskMode mode)
         fhigh = 2125.0f;
         inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
         smMode = process_ascii;
-        wprintf(L"\n\nModus FSK_ASCII_300_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_ASCII_300_BAUD  %g Hz / %g Hz    f = 438.450 MHz, 438.550 MHz  FM\n\n", flow, fhigh);
         break;
 
     case FSK_AX25_1200_BAUD_1000Hz:
@@ -253,7 +259,7 @@ void init_fsk_demod(FskMode mode)
         fhigh = 2200.0f;
         inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
         smMode = process_ax25;
-        wprintf(L"\n\nModus FSK_AX25_1200_BAUD  %g Hz / %g Hz\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_AX25_1200_BAUD  %g Hz / %g Hz   f = 438.450 MHz, 438.550 MHz, 144.800 MHz  FM\n\n", flow, fhigh);
         break;
 
     default:

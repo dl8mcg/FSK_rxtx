@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 ... März 2026      2FSK - AX25 - Decoder 
+*   by dl8mcg Jan. 2025 to April 2026      2FSK - AX25 - Decoder 
 */
 
 #include <stdlib.h>
@@ -202,13 +202,13 @@ void stateFrame2()          // Nutzdaten empfangen
 
         if (current_crc == 0x1D0F)
         {
-            printf("\n[CRC OK] (CRC: 0x%04X)\n", current_crc);
+            writeToRingBufferFormatted("\n[CRC : 0x%04X  OK]\n", current_crc);
             smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
             return;
         }
         else
         {
-            printf("\n[CRC ERROR] (CRC: 0x%04X)\n", current_crc);
+            writeToRingBufferFormatted("\n[CRC : 0x%04X  ERROR]\n", current_crc);
             smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
             return;
         }
