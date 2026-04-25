@@ -11,6 +11,6 @@
 #include <stdint.h>
 
 #define FRAMES_PER_BUFFER 256
-#define SAMPLING_RATE 44100.0f    // Sampling rate in Hz
+#define SAMPLING_RATE 48000.0f   //44100.0f    // Sampling rate in Hz
 
 #endif // CONFIG_H

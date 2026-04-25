@@ -32,15 +32,12 @@ static uint8_t oldbit = 0;
 static uint8_t bitcnt = 0;
 static uint8_t onecnt = 0;
 static bool    rxbit = false;
-
 static uint16_t current_crc = 0xFFFF;
-
 
 // Puffer für verzögerte Ausgabe von 2 Bytes (Pipeline)
 static uint8_t delay1 = 0;
 static uint8_t delay2 = 0;
 static uint8_t delay_count = 0;
-
 
 static inline uint16_t update_crc(uint16_t crc, uint8_t data) 
 {
@@ -49,7 +46,8 @@ static inline uint16_t update_crc(uint16_t crc, uint8_t data)
     uint8_t d = data;
 
     // Verarbeite LSB zuerst — entspricht Ursprungscode, nur effizienter geschrieben.
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 8; ++i) 
+    {
         uint16_t mix = ((c >> 15) & 1) ^ (d & 1);
         c <<= 1;
         d >>= 1;

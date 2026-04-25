@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
-#include <wchar.h>
 #include <windows.h>
 #include <conio.h>      
 #include <stdint.h>
@@ -21,9 +19,9 @@ int main()
 {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    wprintf(L"                      RYTL - TYTL                                      by dl8mcg 2026\n\n");
-    wprintf(L"Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n");
-    initialize_audiostream(); 
+    initialize_audiostream();
+    printf("                      RYTL - TYTL                                      by dl8mcg 2026\n\n");
+    printf("Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n");
     init_fsk_demod(FSK_RTTY_45_BAUD_170Hz);
 
     while (1)
@@ -36,8 +34,6 @@ int main()
             {
 
                 key = _getch(); // Zweites Zeichen lesen (Tastencode)
-
-                stop();
 
                 switch (key)
                 {
@@ -60,15 +56,14 @@ int main()
                         init_fsk_demod(FSK_AX25_1200_BAUD_1000Hz);
                         break;
                     case 66: // F8
-                        wprintf(L"\n\nProgramm beendet.\n\n");
+                        printf("\n\nProgramm beendet.\n\n");
                         stop_audiostream();
-                        wprintf(L"73\n");
+                        printf("73\n");
                         Sleep(1000);
                         return 0;
                     default:
-                    ;
+                        ;
                 }
-                start();
             }
         }
 
@@ -84,10 +79,6 @@ int main()
 				putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
 				putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
             }
-
-
         }
-
     }
-
 }

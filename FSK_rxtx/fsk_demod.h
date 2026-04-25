@@ -17,10 +17,16 @@ typedef enum
     FSK_AX25_1200_BAUD_1000Hz
 } FskMode;
 
+typedef struct
+{
+    float amp1;
+    float amp2;
+} FskAmplitudes;
+
 extern volatile int demod_bit;
-//extern static int demod_bit;
 
 void init_fsk_demod(FskMode mode);
-void process_fsk_demodulation(float sample);
+//void process_fsk_demodulation(float sample);
+FskAmplitudes process_fsk_demod_center_nco(float sample);
 
 #endif // DEMOD_H

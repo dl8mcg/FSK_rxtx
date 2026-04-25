@@ -4,7 +4,6 @@
 
 #include <portAudio.h>
 #include <stdio.h>
-#include <locale.h>
 #include <windows.h>
 #include "config.h"
 #include "fsk_demod.h"
@@ -29,13 +28,18 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
+        FskAmplitudes amp = process_fsk_demod_center_nco(input[i]);   // FSK-Demodulation
+
         nco_phase += nco_inc;
-        if (nco_phase > 2 * (float)M_PI) nco_phase -= 2 * (float)M_PI;
+        if (nco_phase > 2 * (float)M_PI) 
+            nco_phase -= 2 * (float)M_PI;
         sample = cosf(nco_phase);
 
-        process_fsk_demodulation(input[i]);     // FSK-Demodulation
-
-        if (output) output[i] = 0.0f; // optional: stummes Output, sicherstellen dass output nicht dereferenziert wird wenn NULL
+        if (output)
+        {
+            output[i * 2] = amp.amp1; // Linker Kanal debugging
+            output[i * 2 + 1] = amp.amp2; // Rechter Kanal debugging
+        }
     }
     return paContinue;
 }
@@ -54,21 +58,21 @@ int initialize_audiostream()
     int numDevices = Pa_GetDeviceCount();
     if (numDevices < 0)
     {
-        printf("Fehler beim Abrufen der Geräteanzahl: %s\n", Pa_GetErrorText(numDevices));
+        printf("Fehler beim Abrufen der Geraeteanzahl: %s\n", Pa_GetErrorText(numDevices));
         Pa_Terminate();
         return 1;
     }
 
-    //printf("Verfügbare Geräte:\n");
-    //for (int i = 0; i < numDevices; i++)
-    //{
-    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
-    //    printf("[%d] Name: %s, Eingabekanäle: %d, Ausgabekanäle: %d\n",
-    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
-    //}
+    printf("Verfuegbare Geraete:\n");
+    for (int i = 0; i < numDevices; i++)
+    {
+        const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
+        printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",
+            i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
+    }
 
     // Versuche Default-Devices zuerst
-    int inputDevice = Pa_GetDefaultInputDevice();
+    int inputDevice =  Pa_GetDefaultInputDevice();
     int outputDevice = Pa_GetDefaultOutputDevice();
 
     // Fallback: erstes verfügbares Device mit Eingabekanälen / Ausgabekanälen
@@ -101,19 +105,22 @@ int initialize_audiostream()
 
     if (inputDevice < 0)
     {
-        printf("Kein Eingabegerät gefunden.\n");
+        printf("Kein Eingabegeraet gefunden.\n");
         Pa_Terminate();
         return 1;
     }
     if (outputDevice < 0)
     {
-        printf("Kein Ausgabegerät gefunden.\n");
+        printf("Kein Ausgabegeraet gefunden.\n");
         Pa_Terminate();
         return 1;
     }
 
     const PaDeviceInfo* inInfo = Pa_GetDeviceInfo(inputDevice);
     const PaDeviceInfo* outInfo = Pa_GetDeviceInfo(outputDevice);
+
+    printf("Verwende Input-Device  [%d]: %s\n", inputDevice, inInfo ? inInfo->name : "unknown");
+    printf("Verwende Output-Device [%d]: %s\n", outputDevice, outInfo ? outInfo->name : "unknown");
 
     // Eingabeparameter (initialisiert, um uninitialisierte Felder zu vermeiden)
     PaStreamParameters inputParameters;
@@ -128,7 +135,7 @@ int initialize_audiostream()
     PaStreamParameters outputParameters;
     memset(&outputParameters, 0, sizeof(outputParameters));
     outputParameters.device = outputDevice;
-    outputParameters.channelCount = 1;          // Mono
+    outputParameters.channelCount = 2;          // Mono
     outputParameters.sampleFormat = paFloat32;
     outputParameters.suggestedLatency = outInfo ? outInfo->defaultLowOutputLatency : 0.05;
     outputParameters.hostApiSpecificStreamInfo = NULL;
@@ -137,7 +144,7 @@ int initialize_audiostream()
     err = Pa_IsFormatSupported(&inputParameters, &outputParameters, (double)SAMPLING_RATE);
     if (err != paNoError)
     {
-        printf("Geräteformat nicht unterstützt (Pa_IsFormatSupported): %s\n", Pa_GetErrorText(err));
+        printf("Geraeteformat nicht unterstuetzt (Pa_IsFormatSupported): %s\n", Pa_GetErrorText(err));
         printf("Input-Device [%d]: %s, defaultSampleRate: %.0f, maxInputChannels: %d\n",
             inputDevice, inInfo ? inInfo->name : "unknown", inInfo ? inInfo->defaultSampleRate : 0.0, inInfo ? inInfo->maxInputChannels : 0);
         printf("Output-Device [%d]: %s, defaultSampleRate: %.0f, maxOutputChannels: %d\n",
@@ -151,11 +158,19 @@ int initialize_audiostream()
 
     if (err != paNoError)
     {
-        printf("Fehler beim Öffnen des Streams: %s\n", Pa_GetErrorText(err));
+        printf("Fehler beim Oeffnen des Streams: %s\n", Pa_GetErrorText(err));
         printf("Versuchtes Input-Device [%d]: %s\n", inputDevice, inInfo ? inInfo->name : "unknown");
         printf("Versuchtes Output-Device [%d]: %s\n", outputDevice, outInfo ? outInfo->name : "unknown");
         Pa_Terminate();
         return 1;
+    }
+
+    const PaStreamInfo* streamInfo = Pa_GetStreamInfo(stream);
+    if (streamInfo)
+    {
+        printf("Tatsaechliche Samplerate:       %.1f Hz\n", streamInfo->sampleRate);
+        printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);
+        printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);
     }
 
     // Stream starten
@@ -168,7 +183,7 @@ int initialize_audiostream()
         return 1;
     }
 
-    //printf("Audio-Streaming läuft... Drücke Enter zum Beenden.\n");
+    printf("\n");
     return 0;
 }
 
@@ -183,12 +198,3 @@ void stop_audiostream()
     Pa_Terminate();
 }
 
-void stop()
-{
-    if (stream) Pa_StopStream(stream);
-}
-
-void start()
-{
-    if (stream) Pa_StartStream(stream);
-}

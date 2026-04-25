@@ -12,21 +12,13 @@ static uint8_t rxbit;
 static uint8_t rxbyte = 0;              // shift-in register
 static uint8_t bit_count = 0;
 static uint8_t bit_buffer = 0;
-
 static uint8_t lenuserdata = 0;
-
 static uint8_t cntdata = 0;
-
-
 static uint8_t parity = 0;
-
 static uint8_t checksum = 0;
-
 volatile static bool okflag = false;
-
 static uint8_t databuf[7];
 static uint8_t cntbuf = 0;
-
 char buffer[1000];
 
 // Funktionszeiger für Zustandsmaschine Bytedetektion
@@ -35,7 +27,6 @@ static void state2();
 static void state3();
 static void state4();
 static void (*smEfr)() = state1;        // Initialzustand
-
 
 // Funktionszeiger für Zustandsmaschine Protokoll
 static void stateprot1(uint8_t resbyte);
@@ -49,7 +40,6 @@ static void stateprot8(uint8_t resbyte);
 static void stateprot9(uint8_t resbyte);
 static void stateprot10(uint8_t resbyte);
 static void (*smEfrprot)(uint8_t resbyte) = stateprot1;        // Initialzustand
-
 
 void process_efr(uint8_t bit)
 {
@@ -100,8 +90,6 @@ static void state4()                    // Prüfung des zweiten Stopp-Bits
     }
     smEfr = state1;                     // Zurücksetzen für nächstes Zeichen
 }
-
-
 
 static void stateprot1(uint8_t resbyte)
 {
