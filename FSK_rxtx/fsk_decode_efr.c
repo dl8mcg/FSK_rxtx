@@ -1,6 +1,8 @@
-/*
+ï»¿/*
 *   by dl8mcg Jan. 2025 to April 2026       2FSK - EFR - Decoder
 */
+
+// DIN EN 60870-5-104:2018-07   DINâ€¯43861â€‘301 (â€žVersacomâ€œ)
 
 #include <stdint.h>
 #include <stdio.h>
@@ -21,14 +23,14 @@ static uint8_t databuf[7];
 static uint8_t cntbuf = 0;
 char buffer[1000];
 
-// Funktionszeiger für Zustandsmaschine Bytedetektion
+// Funktionszeiger fÃ¼r Zustandsmaschine Bytedetektion
 static void state1();
 static void state2();
 static void state3();
 static void state4();
 static void (*smEfr)() = state1;        // Initialzustand
 
-// Funktionszeiger für Zustandsmaschine Protokoll
+// Funktionszeiger fÃ¼r Zustandsmaschine Protokoll
 static void stateprot1(uint8_t resbyte);
 static void stateprot2(uint8_t resbyte);
 static void stateprot3(uint8_t resbyte);
@@ -82,13 +84,13 @@ static void state3()                    // Parity
     smEfr = state1;                     // parity wrong
 }
 
-static void state4()                    // Prüfung des zweiten Stopp-Bits
+static void state4()                    // PrÃ¼fung des zweiten Stopp-Bits
 {
     if (rxbit == 1)                     // Zweites Stopp-Bit korrekt
     {
         smEfrprot(bit_buffer);
     }
-    smEfr = state1;                     // Zurücksetzen für nächstes Zeichen
+    smEfr = state1;                     // ZurÃ¼cksetzen fÃ¼r nÃ¤chstes Zeichen
 }
 
 static void stateprot1(uint8_t resbyte)
@@ -119,7 +121,7 @@ static void stateprot3(uint8_t resbyte)
         return;
     }
     writeToRingBufferFormatted("error\n\n");
-    smEfrprot = stateprot1;                 // Fehler, zurück auf 1
+    smEfrprot = stateprot1;                 // Fehler, zurÃ¼ck auf 1
 }
 
 static void stateprot4(uint8_t resbyte)
@@ -192,7 +194,9 @@ static void stateprot10(uint8_t resbyte)
         writeToRingBufferFormatted("stop  : %02X \n\n", resbyte);
         if ((okflag == true) && (lenuserdata == 0x0a))
         {
-            writeToRingBufferFormatted("date : %02d.%02d.%02d    time : %02d:%02d:%02d \n\n", databuf[4] & 0x1F, databuf[5], databuf[6], databuf[3], databuf[2], databuf[1] / 4);
+            writeToRingBufferFormatted("date : %02d.%02d.20%02d    time : %02d:%02d:%02d  ", databuf[4] & 0x1F, databuf[5], databuf[6], databuf[3] & 0x7F, databuf[2], databuf[1] / 4);
+            bool is_dst = (databuf[3] & 0x80) != 0;
+            writeToRingBufferFormatted("%s\n\n", is_dst ? "MESZ" : "MEZ");
         }
     }
     else

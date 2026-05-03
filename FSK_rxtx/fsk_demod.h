@@ -26,7 +26,6 @@ typedef struct
 extern volatile int demod_bit;
 
 void init_fsk_demod(FskMode mode);
-//void process_fsk_demodulation(float sample);
 FskAmplitudes process_fsk_demod_center_nco(float sample);
 
 #endif // DEMOD_H
