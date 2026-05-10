@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to April 2026       sample processing
+*   by dl8mcg Jan. 2025 to May 2026       sample processing
 */
 
 #include <portAudio.h>

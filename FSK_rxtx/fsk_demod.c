@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to April 2026       FSK-demodulator
+*   by dl8mcg Jan. 2025 to May 2026       FSK-demodulator
 */
 
 #include <stdint.h>
@@ -59,6 +59,12 @@ static int bit_avg = 0;
 static bit_avg_threshold = 4;
 static bool toggle_strobe_dbg = false;
 
+
+
+
+static int disc_acc_last = 0;
+
+
 static void BitTransSimple(float disc);
 static void BitTransAvg_0(float disc);
 static void BitTransAvg_1(float disc);
@@ -103,7 +109,8 @@ FskAmplitudes process_fsk_demod_center_nco(float sample)
     if (bit_timer >= samples_per_bit)
     {
         bit_timer = 0;
-        smDecoding(inverse_fsk ? (disc_acc < 0 ? 1 : 0) : (disc_acc > 0 ? 1 : 0));
+        smDecoding(inverse_fsk ? (disc_acc < disc_acc_last ? 1 : 0) : (disc_acc > disc_acc_last ? 1 : 0));
+		disc_acc_last = disc_acc;
         disc_acc = 0.0f;
         disc_acc_dbg = 0.0f;
         toggle_strobe_dbg = !toggle_strobe_dbg;
@@ -134,7 +141,7 @@ void init_fsk_demod(FskMode mode)
             smBitClock = BitTransBuf; 
             inverse_fsk = false; // Standard FSK (mark = high frequency, space = low frequency)
             smDecoding = process_rtty_uos;
-            wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz  set rx to usb\n\n\n\n", flow, fhigh);
+            wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz  set rx to usb   or  f = 438.450 MHz, 438.550 MHz  FM\n\n\n\n", flow, fhigh);
             break;
 
         case FSK_RTTY_50_BAUD_85Hz:

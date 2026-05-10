@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to April 2026       Hauptprogramm
+*   by dl8mcg Jan. 2025 to May 2026       Hauptprogramm
 */
 #include <stdio.h>
 #include <stdlib.h>

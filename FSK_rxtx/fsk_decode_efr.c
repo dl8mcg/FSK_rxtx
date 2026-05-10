@@ -1,5 +1,5 @@
 ﻿/*
-*   by dl8mcg Jan. 2025 to April 2026       2FSK - EFR - Decoder
+*   by dl8mcg Jan. 2025 to May 2026       2FSK - EFR - Decoder
 */
 
 // DIN EN 60870-5-104:2018-07   DIN 43861‑301 („Versacom“)

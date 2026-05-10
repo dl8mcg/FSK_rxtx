@@ -1,5 +1,5 @@
 ﻿/*
-*   by dl8mcg Jan. 2025 to April 2026       2FSK - RTTY - Decoder
+*   by dl8mcg Jan. 2025 to May 2026       2FSK - RTTY - Decoder
 */
 
 #include <stdint.h>
