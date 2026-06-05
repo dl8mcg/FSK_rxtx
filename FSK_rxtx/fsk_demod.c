@@ -228,12 +228,6 @@ void BitClockSlowTrack0(int bit)                        // Zustand der Basisband
         toggle_strobe_dbg ^= 1;                         // Debug: Zeigt die Bit-Abtastung an 
         return;
 	}
-    {
-        bit_timer -= samples_per_bit;                   // Zähler um eine Bitdauer zurücksetzen
-        smDecoding(0);                                  // Detektion eines "0"-Bits
-        toggle_strobe_dbg ^= 1;                         // Debug: Zeigt die Bit-Abtastung an 
-        return;
-    }
     if (bit == 1)                                       // Bitzustand wechselt von "0" auf "1"
     {
         if (bit_timer > samples_per_half_bit)
@@ -251,6 +245,7 @@ void BitClockSlowTrack0(int bit)                        // Zustand der Basisband
 void BitClockSlowTrack1(int bit)                        // Zustand der Basisband-Demodulator-Statemachine: "1"-Bit
 {
 	bit_timer += BIT_TIMER_SCALE;                       // Bit-Timer hochzählen, skaliert mit BIT_TIMER_SCALE für die Fixkomma-Statemachine
+    
     if (bit_timer >= samples_per_bit)                   // Abtastung der Mitte des Bits erreicht
     {
         bit_timer -= samples_per_bit;                   // Zähler um eine Bitdauer zurücksetzen
