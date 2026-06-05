@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to May 2026
+*   by dl8mcg Jan. 2025 to June 2026
 */
 
 #pragma once

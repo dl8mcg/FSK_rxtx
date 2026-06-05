@@ -39,6 +39,9 @@
     <ClCompile Include="sampleprocessing.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="fsk_decode_ax25_g3ruh.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h">
@@ -63,6 +66,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="sampleprocessing.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="fsk_decode_ax25_g3ruh.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,8 +1,8 @@
 ﻿/*
-*   by dl8mcg Jan. 2025 to May 2026       2FSK - EFR - Decoder
+*   by dl8mcg Jan. 2025 to June 2026       2FSK - EFR - Decoder
 */
 
-// DIN EN 60870-5-104:2018-07   DIN 43861‑301 („Versacom“)
+// siehe DIN EN 60870-5-104:2018-07   DIN 43861‑301 („Versacom“)
 
 #include <stdint.h>
 #include <stdio.h>
@@ -192,7 +192,7 @@ static void stateprot10(uint8_t resbyte)
     if (resbyte == 0x16)
     {
         writeToRingBufferFormatted("stop  : %02X \n\n", resbyte);
-        if ((okflag == true) && (lenuserdata == 0x0a))
+        if ((okflag == true) && (lenuserdata == 0x0a) &&(databuf[0]==0))
         {
             writeToRingBufferFormatted("date : %02d.%02d.20%02d    time : %02d:%02d:%02d  ", databuf[4] & 0x1F, databuf[5], databuf[6], databuf[3] & 0x7F, databuf[2], databuf[1] / 4);
             bool is_dst = (databuf[3] & 0x80) != 0;

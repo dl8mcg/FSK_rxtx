@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to May 2026
+*   by dl8mcg Jan. 2025 to June 2026
 */
 
 #pragma once
@@ -14,7 +14,8 @@ typedef enum
     FSK_RTTY_50_BAUD_450Hz,
     FSK_EFR_200_BAUD_340Hz,
     FSK_ASCII_300_BAUD_850Hz,
-    FSK_AX25_1200_BAUD_1000Hz
+    FSK_AX25_1200_BAUD_1000Hz,
+    FSK_AX25_9600_BAUD
 } FskMode;
 
 typedef struct
@@ -26,6 +27,8 @@ typedef struct
 extern volatile int demod_bit;
 
 void init_fsk_demod(FskMode mode);
-FskAmplitudes process_fsk_demod_center_nco(float sample);
+
+extern FskAmplitudes(*smDemod)(float);
+
 
 #endif // DEMOD_H

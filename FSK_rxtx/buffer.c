@@ -1,11 +1,11 @@
 /*
-*   by dl8mcg Jan. 2025 to May 2026       Ringbuffer für dekodierte Zeichen
+*   by dl8mcg Jan. 2025 to June 2026       Ringbuffer für dekodierte Zeichen
 */
 
 #include "buffer.h"
 
-#define RINGBUFFER_SIZE 1024        // Größe des Buffers 
-#define BUFFER_SIZE 1024            // Größe des temporären Puffers
+#define RINGBUFFER_SIZE 4096        // Größe des Buffers 
+#define BUFFER_SIZE 4096            // Größe des temporären Puffers
 
 char ringbuffer[RINGBUFFER_SIZE];
 volatile uint16_t write_index = 0;  // Schreibzeiger 

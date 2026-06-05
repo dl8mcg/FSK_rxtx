@@ -1,10 +1,11 @@
 /*
-*   by dl8mcg Jan. 2025 to May 2026       sample processing
+*   by dl8mcg Jan. 2025 to June 2026       sample processing
 */
 
 #include <portAudio.h>
 #include <stdio.h>
 #include <windows.h>
+#include <string.h>
 #include "config.h"
 #include "fsk_demod.h"
 #define _USE_MATH_DEFINES
@@ -28,12 +29,7 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
-        FskAmplitudes amp = process_fsk_demod_center_nco(input[i]);   // FSK-Demodulation
-
-        nco_phase += nco_inc;
-        if (nco_phase > 2 * (float)M_PI) 
-            nco_phase -= 2 * (float)M_PI;
-        sample = cosf(nco_phase);
+        FskAmplitudes amp = smDemod(input[i]);   // FSK-Demodulation
 
         if (output)
         {
@@ -58,7 +54,7 @@ int initialize_audiostream()
     int numDevices = Pa_GetDeviceCount();
     if (numDevices < 0)
     {
-        printf("Fehler beim Abrufen der Geraeteanzahl: %s\n", Pa_GetErrorText(numDevices));
+        printf("Fehler beim Abrufen der Geraeteanzahl: %s\n", Pa_GetErrorText((PaError)numDevices));
         Pa_Terminate();
         return 1;
     }
@@ -67,38 +63,62 @@ int initialize_audiostream()
     for (int i = 0; i < numDevices; i++)
     {
         const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
+        if (!deviceInfo) continue;
         printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",
             i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
     }
 
-    // Versuche Default-Devices zuerst
-    int inputDevice =  Pa_GetDefaultInputDevice();
+    // Default-Devices initialisieren (sicherer Startpunkt)
+    int inputDevice = Pa_GetDefaultInputDevice();
     int outputDevice = Pa_GetDefaultOutputDevice();
 
-    // Fallback: erstes verfügbares Device mit Eingabekanälen / Ausgabekanälen
-    if (inputDevice == paNoDevice)
+    // Suche nach einem USB-Device (case-insensitive "USB" im Namen)
+    int usbInput = -1;
+    int usbOutput = -1;
+
+    for (int i = 0; i < numDevices; i++)
+    {
+        const PaDeviceInfo* di = Pa_GetDeviceInfo(i);
+        if (!di) continue;
+        const char* name = di->name;
+        if (name == NULL) continue;
+
+        // einfache, robuste Prüfung auf "USB" (groß/klein egal)
+        if (strstr(name, "USB") || strstr(name, "usb"))
+        {
+            if (di->maxInputChannels > 0 && usbInput < 0) usbInput = i;
+            if (di->maxOutputChannels > 0 && usbOutput < 0) usbOutput = i;
+        }
+    }
+
+    // Wenn USB-Geräte gefunden wurden, bevorzugen (überschreibt Default)
+    if (usbInput >= 0) inputDevice = usbInput;
+    if (usbOutput >= 0) outputDevice = usbOutput;
+
+    // Falls kein Default bzw. USB-Device vorhanden: Fallback auf erstes geeignetes Gerät
+    if (inputDevice == paNoDevice || inputDevice < 0)
     {
         inputDevice = -1;
         for (int i = 0; i < numDevices; i++)
         {
             const PaDeviceInfo* di = Pa_GetDeviceInfo(i);
-            if (di && di->maxInputChannels > 0) 
-            { 
-                inputDevice = i; 
+            if (di && di->maxInputChannels > 0)
+            {
+                inputDevice = i;
                 break;
             }
         }
     }
-    if (outputDevice == paNoDevice)
+    if (outputDevice == paNoDevice || outputDevice < 0)
     {
         outputDevice = -1;
         for (int i = 0; i < numDevices; i++)
         {
             const PaDeviceInfo* di = Pa_GetDeviceInfo(i);
-            if (di && di->maxOutputChannels > 0) 
-            { 
-                outputDevice = i; 
-                break; 
+            if (di && di->maxOutputChannels > 0)
+            {
+                outputDevice = i;
+                break;
             }
         }
     }
@@ -135,7 +155,7 @@ int initialize_audiostream()
     PaStreamParameters outputParameters;
     memset(&outputParameters, 0, sizeof(outputParameters));
     outputParameters.device = outputDevice;
-    outputParameters.channelCount = 2;          // Mono
+    outputParameters.channelCount = 2;          // Stereo
     outputParameters.sampleFormat = paFloat32;
     outputParameters.suggestedLatency = outInfo ? outInfo->defaultLowOutputLatency : 0.05;
     outputParameters.hostApiSpecificStreamInfo = NULL;

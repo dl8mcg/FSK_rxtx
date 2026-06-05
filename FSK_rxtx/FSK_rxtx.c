@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to May 2026       Hauptprogramm
+*   by dl8mcg Jan. 2025 to June 2026       Hauptprogramm
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,9 +19,9 @@ int main()
 {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    initialize_audiostream();
-    printf("                      RYTL - TYTL                                      by dl8mcg 2026\n\n");
+    printf("                      RYTLTYTL                                          by dl8mcg 2026\n\n");
     printf("Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n");
+    initialize_audiostream();
     init_fsk_demod(FSK_RTTY_45_BAUD_170Hz);
 
     while (1)
@@ -55,6 +55,9 @@ int main()
                     case 64: // F6
                         init_fsk_demod(FSK_AX25_1200_BAUD_1000Hz);
                         break;
+                    case 65: // F7
+                        init_fsk_demod(FSK_AX25_9600_BAUD);
+						break;
                     case 66: // F8
                         printf("\n\nProgramm beendet.\n\n");
                         stop_audiostream();

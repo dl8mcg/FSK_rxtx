@@ -137,6 +137,7 @@
     <ClCompile Include="buffer.c" />
     <ClCompile Include="fsk_decode_ascii.c" />
     <ClCompile Include="fsk_decode_ax25.c" />
+    <ClCompile Include="fsk_decode_ax25_g3ruh.c" />
     <ClCompile Include="fsk_decode_efr.c" />
     <ClCompile Include="fsk_decode_rtty.c" />
     <ClCompile Include="fsk_demod.c" />
@@ -148,6 +149,7 @@
     <ClInclude Include="config.h" />
     <ClInclude Include="fsk_decode_ascii.h" />
     <ClInclude Include="fsk_decode_ax25.h" />
+    <ClInclude Include="fsk_decode_ax25_g3ruh.h" />
     <ClInclude Include="fsk_decode_efr.h" />
     <ClInclude Include="fsk_decode_rtty.h" />
     <ClInclude Include="fsk_demod.h" />
