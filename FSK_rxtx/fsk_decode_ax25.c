@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "fsk_demod.h"
 #include "config.h"
 #include "buffer.h"
 #include <windows.h>

@@ -7,7 +7,8 @@
 #include <windows.h>
 #include <string.h>
 #include "config.h"
-#include "fsk_demod.h"
+//#include "fsk_demod_float.h"
+#include "fsk_demod_int.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 #define DATA_RATE 1200
@@ -17,6 +18,14 @@ volatile float nco_phase = 0.0f;
 volatile float sample = 0.0f;
 
 PaStream* stream = NULL;
+
+static int32_t float_to_q31(float x)
+{
+    if (!isfinite(x)) return 0;
+    if (x >= 1.0f) return INT32_MAX;
+    if (x <= -1.0f) return INT32_MIN;
+    return (int32_t)llround((double)x * 2147483648.0);
+}
 
 // Audio-Callback-Funktion
 static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData)
@@ -29,7 +38,16 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
-        FskAmplitudes amp = smDemod(input[i]);   // FSK-Demodulation
+
+
+		//output[i * 2] = input[i];     // Linker Kanal Debugging
+		//output[i * 2 + 1] = input[i]; // Rechter Kanal Debugging
+
+
+        int32_t sample_q31 = float_to_q31(input[i] );
+		FskAmplitudes amp = smDemod_int(sample_q31);   // FSK-Demodulation int32-Version
+
+        //FskAmplitudes amp = smDemod_float(input[i]);   // FSK-Demodulation float-Version  
 
         if (output)
         {
@@ -160,6 +178,10 @@ int initialize_audiostream()
     outputParameters.suggestedLatency = outInfo ? outInfo->defaultLowOutputLatency : 0.05;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
+
+
+
+
     // Prüfen ob das Format unterstützt wird
     err = Pa_IsFormatSupported(&inputParameters, &outputParameters, (double)SAMPLING_RATE);
     if (err != paNoError)
@@ -172,6 +194,12 @@ int initialize_audiostream()
         Pa_Terminate();
         return 1;
     }
+
+
+
+
+
+
 
     // Stream öffnen
     err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, SAMPLING_RATE, FRAMES_PER_BUFFER, paClipOff, audioCallback, NULL);

@@ -140,7 +140,8 @@
     <ClCompile Include="fsk_decode_ax25_g3ruh.c" />
     <ClCompile Include="fsk_decode_efr.c" />
     <ClCompile Include="fsk_decode_rtty.c" />
-    <ClCompile Include="fsk_demod.c" />
+    <ClCompile Include="fsk_demod_float.c" />
+    <ClCompile Include="fsk_demod_int.c" />
     <ClCompile Include="FSK_rxtx.c" />
     <ClCompile Include="sampleprocessing.c" />
   </ItemGroup>
@@ -152,7 +153,8 @@
     <ClInclude Include="fsk_decode_ax25_g3ruh.h" />
     <ClInclude Include="fsk_decode_efr.h" />
     <ClInclude Include="fsk_decode_rtty.h" />
-    <ClInclude Include="fsk_demod.h" />
+    <ClInclude Include="fsk_demod_float.h" />
+    <ClInclude Include="FSK_demod_int.h" />
     <ClInclude Include="sampleprocessing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

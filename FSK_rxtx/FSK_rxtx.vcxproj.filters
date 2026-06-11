@@ -33,13 +33,16 @@
     <ClCompile Include="fsk_decode_rtty.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="fsk_demod.c">
+    <ClCompile Include="fsk_demod_float.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="sampleprocessing.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="fsk_decode_ax25_g3ruh.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="fsk_demod_int.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -62,13 +65,16 @@
     <ClInclude Include="fsk_decode_rtty.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="fsk_demod.h">
+    <ClInclude Include="fsk_demod_float.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="sampleprocessing.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="fsk_decode_ax25_g3ruh.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="FSK_demod_int.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

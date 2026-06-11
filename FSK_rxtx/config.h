@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 #define FRAMES_PER_BUFFER 1024 
+//#define SAMPLING_RATE 8000.0f 
 //#define SAMPLING_RATE 38400.0f 
 //#define SAMPLING_RATE 44100.0f 
 //#define SAMPLING_RATE 48000.0f 
