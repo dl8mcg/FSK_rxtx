@@ -21,8 +21,7 @@ int main()
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
     printf("                      RYTLTYTL                                          by dl8mcg 2026\n\n");
-    printf("Mit F1, F2, F3, F4, F5 oder F6 den Modus auszuwählen              Mit F8 das Programm beenden\n\n");
-    printf("              DWD - RTTY geht momentan nicht\n\n");
+    printf("Mit F1, F2, F3, F4, F5, F6 oder F7 den Modus auszuwählen              Mit F8 das Programm beenden\n\n");
     initialize_audiostream();
     init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);
 

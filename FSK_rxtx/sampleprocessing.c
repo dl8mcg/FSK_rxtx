@@ -38,11 +38,8 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
-
-
 		//output[i * 2] = input[i];     // Linker Kanal Debugging
 		//output[i * 2 + 1] = input[i]; // Rechter Kanal Debugging
-
 
         int32_t sample_q31 = float_to_q31(input[i] );
 		FskAmplitudes amp = smDemod_int(sample_q31);   // FSK-Demodulation int32-Version
@@ -77,14 +74,14 @@ int initialize_audiostream()
         return 1;
     }
 
-    printf("Verfuegbare Geraete:\n");
-    for (int i = 0; i < numDevices; i++)
-    {
-        const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
-        if (!deviceInfo) continue;
-        printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",
-            i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
-    }
+    //printf("Verfuegbare Geraete:\n");
+    //for (int i = 0; i < numDevices; i++)
+    //{
+    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
+    //    if (!deviceInfo) continue;
+    //    printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",
+    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
+    //}
 
     // Default-Devices initialisieren (sicherer Startpunkt)
     int inputDevice = Pa_GetDefaultInputDevice();
@@ -178,10 +175,6 @@ int initialize_audiostream()
     outputParameters.suggestedLatency = outInfo ? outInfo->defaultLowOutputLatency : 0.05;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
-
-
-
-
     // Prüfen ob das Format unterstützt wird
     err = Pa_IsFormatSupported(&inputParameters, &outputParameters, (double)SAMPLING_RATE);
     if (err != paNoError)
@@ -194,12 +187,6 @@ int initialize_audiostream()
         Pa_Terminate();
         return 1;
     }
-
-
-
-
-
-
 
     // Stream öffnen
     err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, SAMPLING_RATE, FRAMES_PER_BUFFER, paClipOff, audioCallback, NULL);
@@ -217,8 +204,8 @@ int initialize_audiostream()
     if (streamInfo)
     {
         printf("Tatsaechliche Samplerate:       %.1f Hz\n", streamInfo->sampleRate);
-        printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);
-        printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);
+        //printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);
+        //printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);
     }
 
     // Stream starten

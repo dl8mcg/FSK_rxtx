@@ -522,7 +522,7 @@ void init_fsk_demod_int(FskMode mode)
     case FSK_RTTY_45_BAUD_170Hz:
         init_filter_45bd_170sh();
         smDemod_int = process_fsk_demod_center_nco_int;
-        baud_rate = 45.454545f;
+        baud_rate = 2.0f * 45.454545f;      // doppelte Baudrate, wegen 1.5 Stopitlänge
         flow = 2125.0;
         fhigh = 2295.0;
         inverse_fsk = false;
@@ -533,7 +533,7 @@ void init_fsk_demod_int(FskMode mode)
     case FSK_RTTY_50_BAUD_85Hz:
         init_filter_50bd_85sh();
         smDemod_int = process_fsk_demod_center_nco_int;
-        baud_rate = 2.0f * 50.0f;
+        baud_rate = 2.0f * 50.0f;           // doppelte Baudrate, wegen 1.5 Stopitlänge
         flow = 1957.5;
         fhigh = 2042.5;
         inverse_fsk = true;
@@ -544,7 +544,7 @@ void init_fsk_demod_int(FskMode mode)
     case FSK_RTTY_50_BAUD_450Hz:
         init_filter_50bd_450sh();
         smDemod_int = process_fsk_demod_center_nco_int;
-        baud_rate = 2.0f *50.0f;
+        baud_rate = 2.0f * 50.0f;           // doppelte Baudrate, wegen 1.5 Stopitlänge     
         flow = 1775.0;
         fhigh = 2225.0;
         inverse_fsk = true;

@@ -8,7 +8,7 @@
 #include "buffer.h"
 
 // baudot - tables
-const char letters_table[32] =
+static const char letters_table[32] =
 {
     '\0', 'E', '\n', 'A', ' ', 'S', 'I', 'U',
     '\r', 'D', 'R', 'J', 'N', 'F', 'C', 'K',
@@ -16,7 +16,8 @@ const char letters_table[32] =
     'O', 'B', 'G', ' ', 'M', 'X', 'V', '\0'
 };
 
-const char figures_table[32] =
+
+static const char figures_table[32] =
 {
     '\0', '3', '\n', '-', ' ', '\'', '8', '7',
     '\r', '$', '4', '\'', ',', '!', ':', '(',
@@ -24,26 +25,21 @@ const char figures_table[32] =
     '9', '?', '&', ' ', '.', '/', '=', '\0'
 };
 
-enum RTTY_MODE { LETTERS, FIGURES };
-
-// some variables
-static enum RTTY_MODE current_mode = LETTERS;
-
-static uint8_t rxbit;
+// Dekodierungsvariablen 
+static uint8_t half_count = 0;
+static uint8_t first_half = 0;
+static uint8_t rxbit = 0;
 static uint8_t rxbyte = 0;                      // shift-in register
 static uint8_t bit_count = 0;
 static uint8_t bit_buffer = 0;
+static const char* table = letters_table;       // Zeige auf die aktuelle Tabelle (LETTERS oder FIGURES)
+static bool uos = false;    // Unshift On Space - Flag, um nach einem space-Zeichen automatisch in LETTERS-Modus zu wechseln
 
 // Funktionszeiger für Zustandsmaschine
 static void state1();
 static void state2();
 static void state3();
-
 static void (*smRtty)() = state1;              // Initialzustand
-
-const char* table = letters_table;
-
-static bool uos = false; // Unshift On Space - Flag, um nach einem space-Zeichen automatisch in LETTERS-Modus zu wechseln
 
 void process_rtty(uint8_t bit)
 {
@@ -61,53 +57,88 @@ void process_rtty_uos(uint8_t bit)
     smRtty();
 }
 
-static void state1()                            // Startbit-Suche
+static void state1(void)
 {
-    if ((rxbyte & 0b111) == 0b110)                // Stopbit, Startbit erkannt
+    if ((rxbyte & 0x1F) == 0b11100)
     {
         bit_count = 0;
+        half_count = 0;
         bit_buffer = 0;
+
         smRtty = state2;
     }
 }
 
-static void state2()                            // Datenerfassung
+static void state2(void)
 {
-    bit_buffer = (bit_buffer >> 1) | (rxbit << 4);  // Bits sammeln (LSB zuerst)
-    bit_count++;
+	if (half_count == 0)        // erstes Halbbit empfangen
+    {
+        first_half = rxbit;
+        half_count = 1;
+        return;
+    }
 
-    if (bit_count == 5)                         // Alle Datenbits gesammelt
+    half_count = 0;
+
+    if (first_half != rxbit)    // beide Halbbits müssen gleich sein
+    {
+        smRtty = state1;        // z.B. 10 oder 01 -> Fehler
+        return;
+    }
+
+	bit_buffer >>= 1;           // shift buffer to the right
+
+    if (rxbit)
+		bit_buffer |= 0x10;     // set MSB if bit is 1
+
+	bit_count++;                // Bitzähler erhöhen
+
+	if (bit_count == 5)         // 5 Bits empfangen, jetzt prüfen auf Stopbits
     {
         smRtty = state3;
     }
 }
 
-static void state3()                            // Prüfung des (einzigen) Stopp-Bits und Ausgabe
+static void state3(void)
 {
-    if (rxbit == 1) // Stopp-Bit korrekt -> Zeichen akzeptieren
+    static uint8_t stop_count = 0;
+
+    if (rxbit == 1)
     {
-        // Sonderfälle für Figures/Letters und unshift on space
-        if ((bit_buffer & 0x1F) == 0b11111)
-        {
-            table = letters_table;
-            smRtty = state1;
+		stop_count++;     
+		if (stop_count < 3)     // 3 Halb-Stopbits erwartet, weiter warten
             return;
-        }
-
-        if ((bit_buffer & 0x1F) == 0b11011)
-        {
-            table = figures_table;
-            smRtty = state1;
-            return;
-        }
-
-		if (uos && (bit_buffer & 0x1F) == 0b00100)  // Unshift On Space 
-        {
-            table = letters_table;
-        }
-
-        writebuf(table[bit_buffer & 0x1F]);
     }
-    // Egal ob Stopbit korrekt oder nicht: zurück in Startbit‑Suche
+    else
+    {
+		stop_count = 0;         // Fehler: Stopbit muss 1 sein, wenn nicht, zurück zum Anfang
+        smRtty = state1;
+        return;
+    }
+
+    stop_count = 0;
+
+	if ((bit_buffer & 0x1F) == 0b11111)  // Shift to Letters
+    {
+        table = letters_table;
+        smRtty = state1;
+        return;
+    }
+
+	if ((bit_buffer & 0x1F) == 0b11011)  // Shift to Figures
+    {
+        table = figures_table;
+        smRtty = state1;
+        return;
+    }
+
+	if (uos && ((bit_buffer & 0x1F) == 0b00100))  // UOS - Shift to Letters on Space
+    {
+        table = letters_table;
+    }
+
+	writebuf(table[bit_buffer & 0x1F]);     // Ausgabe des dekodierten Zeichens
+
     smRtty = state1;
 }
+
