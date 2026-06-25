@@ -16,59 +16,63 @@
 #include "fsk_decode_ax25.h"
 #include "buffer.h"
 
+#define KEY_PGUP   73
+#define KEY_PGDN   81
+
+uint8_t modus = 1;
+
+
+int read_key() 
+{
+    if (_kbhit())
+        return _getch();
+    return -1;
+}
+
+
+void setmodus(modus)
+{
+    // Modus setzen
+    switch (modus)
+    {
+    case 1: init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz); break;
+    case 2: init_fsk_demod_int(FSK_RTTY_50_BAUD_85Hz); break;
+    case 3: init_fsk_demod_int(FSK_RTTY_50_BAUD_450Hz); break;
+    case 4: init_fsk_demod_int(FSK_EFR_200_BAUD_340Hz); break;
+    case 5: init_fsk_demod_int(FSK_ASCII_300_BAUD_850Hz); break;
+    case 6: init_fsk_demod_int(FSK_AX25_1200_BAUD_1000Hz); break;
+    case 7: init_fsk_demod_int(FSK_AX25_9600_BAUD); break;
+	case 8: init_fsk_demod_int(FSK_SITORB_100_BAUD); break;
+    }
+}
 int main()
 {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
-    printf("                      RYTLTYTL                                          by dl8mcg 2026\n\n");
-    printf("Mit F1, F2, F3, F4, F5, F6 oder F7 den Modus auszuwählen              Mit F8 das Programm beenden\n\n");
+    printf("                           RYTLTYTL                                          by dl8mcg 2026\n\n");
+    printf("            Mit den Page-Up- und Pade-Down-Tasten den Modus auszuwählen \n\n");
     initialize_audiostream();
     init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);
 
     while (1)
     {
-        if (_kbhit())
+        int key = read_key();
+
+        if (key > 0)
         {
-            int key = _getch(); // Erstes Zeichen lesen
+            int keynext = _getch();
 
-            if (key == 0 || key == 224)
+            switch (keynext)
             {
+                case KEY_PGUP:
+                    modus = (modus % 8) + 1;
+                    setmodus(modus);
+                    break;
 
-                key = _getch(); // Zweites Zeichen lesen (Tastencode)
-
-                switch (key)
-                {
-                    case 59: // F1
-                        init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);
-                        break;
-                    case 60: // F2
-                       init_fsk_demod_int(FSK_RTTY_50_BAUD_85Hz);
-                       break;
-                    case 61: // F3
-                        init_fsk_demod_int(FSK_RTTY_50_BAUD_450Hz);
-                       break;
-                    case 62: // F4
-                        init_fsk_demod_int(FSK_EFR_200_BAUD_340Hz);
-                        break;
-                    case 63: // F5
-                        init_fsk_demod_int(FSK_ASCII_300_BAUD_850Hz);
-                        break;
-                    case 64: // F6
-                        init_fsk_demod_int(FSK_AX25_1200_BAUD_1000Hz);
-                        break;
-                    case 65: // F7
-                        init_fsk_demod_int(FSK_AX25_9600_BAUD);
-                        //init_fsk_demod_float(FSK_AX25_9600_BAUD);
-						break;
-                    case 66: // F8
-                        printf("\n\nProgramm beendet.\n\n");
-                        stop_audiostream();
-                        printf("73\n");
-                        Sleep(1000);
-                        return 0;
-                    default:
-                        ;
-                }
+                case KEY_PGDN:
+                    modus = (modus == 1) ? 8 : modus - 1;
+                    setmodus(modus);
+                    break;
             }
         }
 
@@ -77,13 +81,14 @@ int main()
         {
             if (value < 0x80)
             {
-				putchar(value);                  // unverändert ausgeben, da es sich um ein ASCII-Zeichen handelt (1-Byte UTF‑8-Sequenz)
+                putchar(value);                  // unverändert ausgeben, da es sich um ein ASCII-Zeichen handelt (1-Byte UTF‑8-Sequenz)
             }
             else
             {
-				putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
-				putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
+                putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
+                putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
             }
         }
+
     }
 }

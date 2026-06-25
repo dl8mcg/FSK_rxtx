@@ -45,6 +45,9 @@
     <ClCompile Include="fsk_demod_int.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="fsk_decode_sitorb.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h">
@@ -75,6 +78,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="FSK_demod_int.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="fsk_decode_sitorb.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

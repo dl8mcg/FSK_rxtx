@@ -13,6 +13,7 @@
 #include "fsk_decode_ax25.h"
 #include "fsk_decode_efr.h"
 #include "fsk_decode_ax25_g3ruh.h"
+#include "fsk_decode_sitorb.h"
 
 FskAmplitudes process_fsk_demod_baseband_int(int32_t sample_q31);
 FskAmplitudes process_fsk_demod_center_nco_int(int32_t sample_q31);
@@ -239,6 +240,24 @@ static void init_filter_50bd_450sh(void)
 
 	const double fc_disc = 50.0;
 	const double Q_disc = 0.6;
+
+    biquad_init_lowpass(&lp1i, fs, fc, Q);
+    biquad_init_lowpass(&lp2i, fs, fc, Q);
+    biquad_init_lowpass(&lp3i, fs, fc, Q);
+    biquad_init_lowpass(&lp1q, fs, fc, Q);
+    biquad_init_lowpass(&lp2q, fs, fc, Q);
+    biquad_init_lowpass(&lp3q, fs, fc, Q);
+    biquad_init_lowpass(&lpdisc, fs, fc_disc, Q_disc);
+}
+
+static void init_filter_100bd_170sh(void)
+{
+    const double fs = SAMPLING_RATE;
+    const double fc = 500.0;
+    const double Q = 0.6;
+
+    const double fc_disc = 100.0;
+    const double Q_disc = 0.6;
 
     biquad_init_lowpass(&lp1i, fs, fc, Q);
     biquad_init_lowpass(&lp2i, fs, fc, Q);
@@ -527,7 +546,7 @@ void init_fsk_demod_int(FskMode mode)
         fhigh = 2295.0;
         inverse_fsk = false;
         smDecoding = process_rtty_uos;
-        wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz  set rx to usb   or  f = 438.450 MHz, 438.550 MHz  FM\n\n\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_RTTY_45_BAUD  %g Hz / %g Hz  set rx to usb   or  f = 438.450 MHz, 438.550 MHz  FM\n\n", flow, fhigh);
         break;
 
     case FSK_RTTY_50_BAUD_85Hz:
@@ -591,6 +610,20 @@ void init_fsk_demod_int(FskMode mode)
         baud_rate = 9600.0f;
         smDecoding = process_ax25_g3ruh;
         wprintf(L"\n\nModus FSK_AX25_9600_BAUD    baseband   f = 439.850 MHz  \n\n");
+        break;
+
+    case FSK_SITORB_100_BAUD:
+        init_filter_100bd_170sh();
+        smDemod_int = process_fsk_demod_center_nco_int;
+        baud_rate = 100.0f;
+        flow = 900 - 170.0/2;
+        fhigh = 900 + 170.0/2;
+        inverse_fsk = false;
+
+        sitorb_reset();
+
+        smDecoding = process_sitorb;
+        wprintf(L"\n\nModus FSK_SITORB_100_BAUD  %g Hz / %g Hz   f = 490 kHz, 518 kHz, 4209.5 kHz, 12579 kHz    set rx to f - 900 Hz USB\n\n", flow, fhigh);
         break;
 
     default:
