@@ -19,6 +19,7 @@ volatile float sample = 0.0f;
 
 PaStream* stream = NULL;
 
+
 static int32_t float_to_q31(float x)
 {
     if (!isfinite(x)) return 0;

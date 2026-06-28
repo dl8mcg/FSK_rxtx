@@ -21,14 +21,12 @@
 
 uint8_t modus = 1;
 
-
 int read_key() 
 {
     if (_kbhit())
         return _getch();
     return -1;
 }
-
 
 void setmodus(modus)
 {
@@ -45,6 +43,7 @@ void setmodus(modus)
 	case 8: init_fsk_demod_int(FSK_SITORB_100_BAUD); break;
     }
 }
+
 int main()
 {
     SetConsoleOutputCP(CP_UTF8);
@@ -56,10 +55,12 @@ int main()
 
     while (1)
     {
+		int didWork = 0;            // Flag, um zu erkennen, ob etwas zu tun war (Tastendruck oder empfangenes Zeichen)
         int key = read_key();
 
         if (key > 0)
         {
+            didWork = 1;
             int keynext = _getch();
 
             switch (keynext)
@@ -79,6 +80,7 @@ int main()
         unsigned char value;
         if (readbuf(&value))
         {
+			didWork = 1;                        // Flag, um zu erkennen, dass etwas zu tun war (empfangenes Zeichen)
             if (value < 0x80)
             {
                 putchar(value);                  // unverändert ausgeben, da es sich um ein ASCII-Zeichen handelt (1-Byte UTF‑8-Sequenz)
@@ -88,6 +90,11 @@ int main()
                 putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
                 putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
             }
+        }
+
+        if (!didWork)
+        {
+			Sleep(1);                           // CPU-Last reduzieren, wenn gerade nichts zu tun ist (keine Tasteneingabe und kein empfangenes Zeichen)
         }
 
     }

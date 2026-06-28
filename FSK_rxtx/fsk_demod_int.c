@@ -474,7 +474,6 @@ static void BitClockFastTrack1(int bit)
     }
 }
 
-
 static FskAmplitudes process_fsk_demod_center_nco_int(int32_t sample_q31)
 {
     static int bit = 0;
@@ -619,9 +618,7 @@ void init_fsk_demod_int(FskMode mode)
         flow = 900 - 170.0/2;
         fhigh = 900 + 170.0/2;
         inverse_fsk = false;
-
         sitorb_reset();
-
         smDecoding = process_sitorb;
         wprintf(L"\n\nModus FSK_SITORB_100_BAUD  %g Hz / %g Hz   f = 490 kHz, 518 kHz, 4209.5 kHz, 12579 kHz    set rx to f - 900 Hz USB\n\n", flow, fhigh);
         break;
@@ -632,7 +629,7 @@ void init_fsk_demod_int(FskMode mode)
     }
 
     for (int i = 0; i < NCO_TABLE_SIZE; i++)
-        sin_table[i] = q31_from_double(sin(2.0 * M_PI * (double)i / (double)NCO_TABLE_SIZE));
+		sin_table[i] = q31_from_double(sin(2.0 * M_PI * (double)i / (double)NCO_TABLE_SIZE));   // sinus table for NCO
 
     const double fcenter = (flow + fhigh) * 0.5;
     nco_step_acc = (uint32_t)llround((fcenter / (double)SAMPLING_RATE) * 4294967296.0);
