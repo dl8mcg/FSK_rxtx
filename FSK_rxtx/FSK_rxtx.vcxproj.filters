@@ -48,6 +48,9 @@
     <ClCompile Include="fsk_decode_sitorb.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="console_rx.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="buffer.h">
@@ -81,6 +84,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="fsk_decode_sitorb.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="console_rx.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

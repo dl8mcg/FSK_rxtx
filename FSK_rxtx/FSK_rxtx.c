@@ -1,7 +1,8 @@
 /*
-*   by dl8mcg Jan. 2025 to June 2026       Hauptprogramm
+*   by dl8mcg Jan. 2025 to Nov. 2026       Hauptprogramm
 */
 #include <stdio.h>
+#include "console_rx.h"
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -21,10 +22,27 @@
 
 uint8_t modus = 1;
 
-int read_key() 
+/*
+ * Liefert bei erweiterten Konsolentasten direkt den Scan-Code (z. B. 73 für
+ * Page-Up).  _getch() liefert dafür zuerst 0 oder 0xE0 und anschließend den
+ * eigentlichen Scan-Code.  Normale Tasten werden unverändert geliefert.
+ */
+int read_key(void)
 {
+    int key;
+
     if (_kbhit())
-        return _getch();
+    {
+        key = _getch();
+
+        if (key == 0 || key == 0xE0)
+        {
+            return _getch();
+        }
+
+        return key;
+    }
+
     return -1;
 }
 
@@ -44,26 +62,58 @@ void setmodus(modus)
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    /*
+    * --------------------------------------------------------
+    * Wurde diese EXE als RX-Konsolenprozess gestartet?
+    * --------------------------------------------------------
+    */
+    if (argc >= 4 &&
+        strcmp(argv[1], "--console") == 0)
+    {
+        return console_child(
+            argv[2],
+            argv[3]
+        );
+    }
+
+
+    /*
+     * --------------------------------------------------------
+     * Normaler FSK-RX/TX-Hauptprozess
+     * --------------------------------------------------------
+     */
+
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+
     printf("                           RYTLTYTL                                          by dl8mcg 2026\n\n");
     printf("            Mit den Page-Up- und Pade-Down-Tasten den Modus auszuwählen \n\n");
+
+    if (console_rx_open("FSK RX"))
+    {
+        printf("RX-Konsole konnte nicht geöffnet werden.\n");
+    }
+
+    if (console_pkt_open("FSK PACKETS"))
+    {
+        printf("Packet-Konsole konnte nicht geöffnet werden.\n");
+    }
+
     initialize_audiostream();
     init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);
 
     while (1)
     {
-		int didWork = 0;            // Flag, um zu erkennen, ob etwas zu tun war (Tastendruck oder empfangenes Zeichen)
+		int handled_event = 0;            // Flag, um zu erkennen, ob etwas zu tun war (Tastendruck oder empfangenes Zeichen)
         int key = read_key();
 
-        if (key > 0)
+        if (key != -1)
         {
-            didWork = 1;
-            int keynext = _getch();
+			handled_event = 1;              // eine Taste wurde gedrückt
 
-            switch (keynext)
+            switch (key)
             {
                 case KEY_PGUP:
                     modus = (modus % 8) + 1;
@@ -78,21 +128,110 @@ int main()
         }
 
         unsigned char value;
-        if (readbuf(&value))
+        if (readbuf(&value))                // ins FSK RX - Fenster jedes empfangene Zeichen sofort ausgeben
         {
-			didWork = 1;                        // Flag, um zu erkennen, dass etwas zu tun war (empfangenes Zeichen)
+			handled_event = 1;              // ein Zeichen wurde empfangen
+
+            static uint8_t last_was_cr = 0;
+
+            /* CR behandeln */
+            if (value == '\r')
+            {
+                printf_rx("\n");
+                last_was_cr = 1;
+                continue;
+            }
+
+            /* LF behandeln */
+            if (value == '\n')
+            {
+                if (!last_was_cr)
+                    printf_rx("\n");
+
+                last_was_cr = 0;
+                continue;
+            }
+
+            last_was_cr = 0;
+
+            /* normales ASCII */
             if (value < 0x80)
             {
-                putchar(value);                  // unverändert ausgeben, da es sich um ein ASCII-Zeichen handelt (1-Byte UTF‑8-Sequenz)
+                printf_rx("%c", value);
             }
             else
-            {
-                putchar(0xC0 | (value >> 6));    // erstes Byte der UTF‑8-Sequenz: 110xxxxx, wobei x die oberen 2 Bits von value sind
-                putchar(0x80 | (value & 0x3F));  // zweites Byte der UTF‑8-Sequenz: 10xxxxxx, wobei x die unteren 6 Bits von value sind
+            {   // Sonderzeichen in UTF8 wandeln
+                printf_rx           
+                (
+                    "%c%c",
+                    0xC0 | (value >> 6),
+                    0x80 | (value & 0x3F)
+                );
             }
         }
 
-        if (!didWork)
+
+        const char* packet;
+
+		if (ax25_packet_get(&packet))           // ins FSK PACKET - Fenster fehlerfrei empfangene Packete ausgeben
+        {
+            char packet_utf8[AX25_PACKET_BUFFER_SIZE * 2];
+            const unsigned char* src = (const unsigned char*)packet;
+            size_t dst = 0;
+
+			handled_event = 1;                  // ein Packet wurde empfangen                  
+
+            while (*src != '\0' && dst < sizeof(packet_utf8) - 1)
+            {
+                unsigned char value = *src++;
+
+                static uint8_t last_was_cr = 0;
+
+                /* CR behandeln */
+                if (value == '\r')
+                {
+                    packet_utf8[dst++] = '\n';
+                    last_was_cr = 1;
+                    continue;
+                }
+
+                /* LF behandeln */
+                if (value == '\n')
+                {
+                    if (!last_was_cr)
+                    {
+                        packet_utf8[dst++] = '\n';
+                    }
+
+                    last_was_cr = 0;
+                    continue;
+                }
+
+                last_was_cr = 0;
+
+                /* normales ASCII */
+                if (value < 0x80)
+                {
+                    packet_utf8[dst++] = (char)value;
+                }
+                else
+                {   // Sonderzeichen in UTF8 wandeln
+                    if (dst + 2 >= sizeof(packet_utf8))
+                        break;
+
+                    packet_utf8[dst++] = (char)(0xC0 | (value >> 6));
+                    packet_utf8[dst++] = (char)(0x80 | (value & 0x3F));
+                }
+            }
+
+            packet_utf8[dst] = '\0';    // 0 am Ende des Strings
+
+            printf_pkt("%s", packet_utf8);
+            ax25_packet_release();
+        }
+
+
+        if (!handled_event)
         {
 			Sleep(1);                           // CPU-Last reduzieren, wenn gerade nichts zu tun ist (keine Tasteneingabe und kein empfangenes Zeichen)
         }

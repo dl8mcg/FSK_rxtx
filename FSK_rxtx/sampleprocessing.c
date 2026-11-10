@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to June 2026       sample processing
+*   by dl8mcg Jan. 2025 to Nov. 2026       sample processing
 */
 
 #include <portAudio.h>
@@ -7,11 +7,11 @@
 #include <windows.h>
 #include <string.h>
 #include "config.h"
-//#include "fsk_demod_float.h"
+//#include "fsk_demod_float.h"              // <-- nicht löschen
 #include "fsk_demod_int.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-#define DATA_RATE 1200
+//#define DATA_RATE 1200
 #define nco_inc  2 * (float)M_PI * DATA_RATE / SAMPLING_RATE
 
 volatile float nco_phase = 0.0f;
@@ -39,18 +39,18 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
-		//output[i * 2] = input[i];     // Linker Kanal Debugging
-		//output[i * 2 + 1] = input[i]; // Rechter Kanal Debugging
+		//output[i * 2] = input[i];         // Linker Kanal Debugging    <-- nicht löschen
+		//output[i * 2 + 1] = input[i];     // Rechter Kanal Debugging   <-- nicht löschen
 
         int32_t sample_q31 = float_to_q31(input[i] );
 		FskAmplitudes amp = smDemod_int(sample_q31);   // FSK-Demodulation int32-Version
 
-        //FskAmplitudes amp = smDemod_float(input[i]);   // FSK-Demodulation float-Version  
+        //FskAmplitudes amp = smDemod_float(input[i]);   // FSK-Demodulation float-Version  <-- nicht löschen
 
         if (output)
         {
-            output[i * 2] = amp.amp1; // Linker Kanal debugging
-            output[i * 2 + 1] = amp.amp2; // Rechter Kanal debugging
+            output[i * 2] = amp.amp1;           // Linker Kanal debugging
+            output[i * 2 + 1] = amp.amp2;       // Rechter Kanal debugging
         }
     }
     return paContinue;
@@ -75,14 +75,14 @@ int initialize_audiostream()
         return 1;
     }
 
-    //printf("Verfuegbare Geraete:\n");
-    //for (int i = 0; i < numDevices; i++)
-    //{
-    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);
-    //    if (!deviceInfo) continue;
-    //    printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",
-    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);
-    //}
+    //printf("Verfuegbare Geraete:\n");                                                             //<-- nicht löschen
+    //for (int i = 0; i < numDevices; i++)                                                          //<-- nicht löschen
+    //{                                                                                             //<-- nicht löschen
+    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);                                     //<-- nicht löschen
+    //    if (!deviceInfo) continue;                                                                //<-- nicht löschen
+    //    printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",                         //<-- nicht löschen
+    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);    //<-- nicht löschen
+    //}                                                                                             //<-- nicht löschen
 
     // Default-Devices initialisieren (sicherer Startpunkt)
     int inputDevice = Pa_GetDefaultInputDevice();
@@ -125,6 +125,7 @@ int initialize_audiostream()
             }
         }
     }
+
     if (outputDevice == paNoDevice || outputDevice < 0)
     {
         outputDevice = -1;
@@ -205,8 +206,8 @@ int initialize_audiostream()
     if (streamInfo)
     {
         printf("Tatsaechliche Samplerate:       %.1f Hz\n", streamInfo->sampleRate);
-        //printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);
-        //printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);
+        //printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);        //<-- nicht löschen
+        //printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);       //<-- nicht löschen
     }
 
     // Stream starten

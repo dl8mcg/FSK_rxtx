@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to June 2026      2FSK - AX25 - G3RUH - Decoder
+*   by dl8mcg Jan. 2025 to Nov. 2026      2FSK - AX25 - G3RUH - Decoder
 */
 
 #include <stdlib.h>
@@ -37,50 +37,6 @@ static uint16_t current_crc = 0xFFFF;
 static uint8_t delay1 = 0;
 static uint8_t delay2 = 0;
 static uint8_t delay_count = 0;
-
-
-static void writeax25tobuf(unsigned char uc)
-{
-	// Spezielle Behandlung von Zeilenumbrüchen: CR und LF explizit durchlassen, aber nur als LF ausgeben
-
-    static int last_was_cr = 0;
-
-    if (uc == '\r')                 // CR explizit durchlassen, aber als LF ausgeben
-    {
-        writebuf('\n');             // LF
-        last_was_cr = 1;
-        return;
-    }
-
-    if (uc == '\n')                 // LF explizit durchlassen, aber nur ausgeben, wenn nicht direkt vorher ein CR kam
-    {
-        if (!last_was_cr)           // LF ausgeben, wenn nicht direkt vorher ein CR kam
-        {
-            writebuf('\n');         // LF
-        }
-        last_was_cr = 0;
-        return;
-    }
-
-    last_was_cr = 0;
-
-    // Normale druckbare ASCII-Zeichen erlauben
-    if (uc >= 0x20 && uc <= 0x7E)
-    {
-        writebuf(uc);
-        return;
-    }
-
-    if (uc == 0xE4 || uc == 0xF6 || uc == 0xFC || uc == 0xDF)  // äöüß
-    {
-        writebuf(uc);   
-		return;
-    }
-
-    // Alle anderen (steuer-)Zeichen als Punkt ausgeben
-    writebuf('.');
-}
-
 
 // G3RUH -Descrambler: 16-Bit-LSR mit Rückkopplung über Bit 11 und 15
 static uint16_t g3ruh_lsr = 0x1000;
@@ -237,10 +193,16 @@ void stateFrame1()          // Flag empfangen – warte auf erstes Nutzdaten-Byt
     if (bitcnt < 8)         // Noch kein vollständiges Byte
         return;
 
-    current_crc = 0xFFFF;
 
     // Erstes vollständiges Datenbyte nach dem Flag
+    current_crc = 0xFFFF;
+
+    /* Neuen Paketbuffer A oder B beginnen */
+    ax25_packet_start();
+
+    /* Zeilenumbruch in beide Ausgabepuffer schreiben */
     writebuf('\n');
+    ax25_packet_put('\n');
 
     bitcnt = 0;
     smContent = stateContent0;
@@ -259,16 +221,23 @@ void stateFrame2()          // Nutzdaten empfangen
         delay1 = 0;
         delay2 = 0;
 
+
         if (current_crc == 0x1D0F)
         {
+            ax25_packet_finish();
+
             writeToRingBufferFormatted("\n[CRC : 0x%04X  OK]\n", current_crc);
-            smFrame = stateFrame1;   // Zurück: nächsten Frame erwarten
+
+            smFrame = stateFrame1;
             return;
         }
         else
         {
+            ax25_packet_abort();
+
             writeToRingBufferFormatted("\n[CRC : 0x%04X  ERROR]\n", current_crc);
-            smFrame = stateFrame00;   // Zurück: nächsten Frame erwarten
+
+            smFrame = stateFrame00;
             return;
         }
     }
@@ -288,11 +257,14 @@ void stateFrame2()          // Nutzdaten empfangen
 void stateContent0()        // Adressfelder: Zeichen sind um 1 Bit nach links geshiftet
 {
     current_crc = update_crc(current_crc, rxbyte);
-	writeax25tobuf(rxbyte >> 1);
+    writebuf(rxbyte >> 1);
+    ax25_packet_put(rxbyte >> 1);
 
-    if (rxbyte & 0x01)      // LSB gesetzt → letztes Adressbyte
+    if (rxbyte & 0x01)    // LSB gesetzt → letztes Adressbyte
     {
         writebuf('\n');
+        ax25_packet_put('\n');
+
         smContent = stateContent1;
     }
 
@@ -327,14 +299,17 @@ void stateContent3()        // Info-Feld: Nutzdaten ausgeben
 
     if (delay_count < 2)
     {
-        if (delay_count == 0) delay1 = rxbyte;
-        else delay2 = rxbyte;
+        if (delay_count == 0) 
+            delay1 = rxbyte;
+        else 
+            delay2 = rxbyte;
         delay_count++;
         return;
     }
 
     // ältestes Byte ausgeben
-	writeax25tobuf(delay1);
+    writebuf(delay1);
+    ax25_packet_put(delay1);
 
     // Pipeline weiterschieben
     delay1 = delay2;
