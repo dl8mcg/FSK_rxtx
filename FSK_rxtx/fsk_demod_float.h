@@ -4,8 +4,8 @@
 
 #pragma once
 
-#ifndef DEMOD_H
-#define DEMOD_H
+#ifndef DEMODFLOAT_H
+#define DEMODFLOAT_H
 
 typedef enum 
 {
@@ -15,7 +15,8 @@ typedef enum
     FSK_EFR_200_BAUD_340Hz,
     FSK_ASCII_300_BAUD_850Hz,
     FSK_AX25_1200_BAUD_1000Hz,
-    FSK_AX25_9600_BAUD
+    FSK_AX25_9600_BAUD,
+    FSK_SITORB_100_BAUD
 } FskMode;
 
 typedef struct
@@ -29,4 +30,4 @@ void init_fsk_demod_float(FskMode mode);
 extern FskAmplitudes(*smDemod_float)(float);
 
 
-#endif // DEMOD_H
+#endif // DEMODFLOAT_H

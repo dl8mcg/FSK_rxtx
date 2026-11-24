@@ -1,11 +1,12 @@
+
 /*
-*   by dl8mcg Jan. 2025 to Nov. 2026       Ringbuffer für dekodierte Zeichen
+*   by dl8mcg Jan. 2025 to Nov. 2026       Ringbuffer fÃ¼r dekodierte Zeichen
 */
 
 #include "buffer.h"
 
-#define RINGBUFFER_SIZE 4096        // Größe des Buffers 
-#define BUFFER_SIZE 4096            // Größe des temporären Puffers
+#define RINGBUFFER_SIZE 4096        // GrÃ¶ÃŸe des Buffers 
+#define BUFFER_SIZE 4096            // GrÃ¶ÃŸe des temporÃ¤ren Puffers
 
 char ringbuffer[RINGBUFFER_SIZE];
 volatile uint16_t write_index = 0;  // Schreibzeiger 
@@ -22,7 +23,7 @@ void writeToRingBuffer(const char* text)
 
 void writeToRingBufferFormatted(const char* format, ...)
 {
-    char buffer[BUFFER_SIZE];  // Temporärer Puffer für den formatierten String
+    char buffer[BUFFER_SIZE];  // TemporÃ¤rer Puffer fÃ¼r den formatierten String
     va_list args;              // Variadische Argumente
     va_start(args, format);    // Initialisiere Argument-Liste
 
@@ -41,7 +42,7 @@ void writebuf(char val)
     // Schreibe das Zeichen in den Ringbuffer
     uint16_t next_write_index = (write_index + 1) % RINGBUFFER_SIZE;
 
-    // Überprüfe, ob der Ringbuffer voll ist
+    // ÃœberprÃ¼fe, ob der Ringbuffer voll ist
     if (next_write_index != read_index)
     {
         ringbuffer[write_index] = val; 
@@ -52,7 +53,7 @@ void writebuf(char val)
 
 bool readbuf(char* val)
 {
-    // Prüfe, ob Daten im Ringbuffer vorhanden sind
+    // PrÃ¼fe, ob Daten im Ringbuffer vorhanden sind
     if (read_index != write_index)
     {
         // Zeichen aus dem Ringbuffer lesen
@@ -65,13 +66,12 @@ bool readbuf(char* val)
 
 
 #include <stddef.h>
-//#include "buffer.h"
 
 /* Zwei Paketpuffer */
 static char packet_a[AX25_PACKET_BUFFER_SIZE];
 static char packet_b[AX25_PACKET_BUFFER_SIZE];
 
-/* Länge der Pakete */
+/* LÃ¤nge der Pakete */
 static size_t length_a = 0;
 static size_t length_b = 0;
 
@@ -90,7 +90,7 @@ static volatile int* write_ready = &ready_a;
 /* Aktueller Lesepuffer: 0 = A, 1 = B */
 static int read_buffer = 0;
 
-/* Schreibpuffer für ein neues Paket auswählen */
+/* Schreibpuffer fÃ¼r ein neues Paket auswÃ¤hlen */
 void ax25_packet_start(void)
 {
     if (write_buffer == 0)
@@ -110,7 +110,7 @@ void ax25_packet_start(void)
     write_data[0] = '\0';
 }
 
-/* Zeichen hinzufügen */
+/* Zeichen hinzufÃ¼gen */
 void ax25_packet_put(char value)
 {
     if (*write_length < AX25_PACKET_BUFFER_SIZE - 1)
@@ -121,7 +121,7 @@ void ax25_packet_put(char value)
     }
 }
 
-/* Vollständiges Paket veröffentlichen und Schreibpuffer wechseln */
+/* VollstÃ¤ndiges Paket verÃ¶ffentlichen und Schreibpuffer wechseln */
 void ax25_packet_finish(void)
 {
     write_data[*write_length] = '\0';
@@ -136,11 +136,11 @@ void ax25_packet_abort(void)
     *write_length = 0;
     write_data[0] = '\0';
 
-    /* Bei Fehler nicht auf den nächsten Puffer wechseln.
-       Der nächste gültige Frame verwendet denselben Puffer. */
+    /* Bei Fehler nicht auf den nÃ¤chsten Puffer wechseln.
+       Der nÃ¤chste gÃ¼ltige Frame verwendet denselben Puffer. */
 }
 
-/* Nächstes Paket in der Reihenfolge A, B, A, B abholen */
+/* NÃ¤chstes Paket in der Reihenfolge A, B, A, B abholen */
 int ax25_packet_get(const char** data)
 {
     if (data == NULL)
@@ -174,3 +174,5 @@ void ax25_packet_release(void)
 
     read_buffer ^= 1;
 }
+
+

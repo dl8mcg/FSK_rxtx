@@ -9,8 +9,8 @@
 #include <conio.h>      
 #include <stdint.h>
 #include "config.h"
-//#include "fsk_demod_float.h"
-#include "fsk_demod_int.h"
+#include "fsk_demod_float.h"  // <-- nicht löschen
+//#include "fsk_demod_int.h"    // <-- nicht löschen
 #include "fsk_decode_rtty.h"
 #include "sampleprocessing.h"
 #include "fsk_decode_ascii.h"
@@ -48,17 +48,30 @@ int read_key(void)
 
 void setmodus(modus)
 {
-    // Modus setzen
+ //   // Modus setzen für die integer-Version von fsk_demod
+ //   switch (modus)
+ //   {
+ //   case 1: init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz); break;
+ //   case 2: init_fsk_demod_int(FSK_RTTY_50_BAUD_85Hz); break;
+ //   case 3: init_fsk_demod_int(FSK_RTTY_50_BAUD_450Hz); break;
+ //   case 4: init_fsk_demod_int(FSK_EFR_200_BAUD_340Hz); break;
+ //   case 5: init_fsk_demod_int(FSK_ASCII_300_BAUD_850Hz); break;
+ //   case 6: init_fsk_demod_int(FSK_AX25_1200_BAUD_1000Hz); break;
+ //   case 7: init_fsk_demod_int(FSK_AX25_9600_BAUD); break;
+	//case 8: init_fsk_demod_int(FSK_SITORB_100_BAUD); break;
+ //   }
+
+    // Modus setzen für die floating-point-Version von fsk_demod
     switch (modus)
     {
-    case 1: init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz); break;
-    case 2: init_fsk_demod_int(FSK_RTTY_50_BAUD_85Hz); break;
-    case 3: init_fsk_demod_int(FSK_RTTY_50_BAUD_450Hz); break;
-    case 4: init_fsk_demod_int(FSK_EFR_200_BAUD_340Hz); break;
-    case 5: init_fsk_demod_int(FSK_ASCII_300_BAUD_850Hz); break;
-    case 6: init_fsk_demod_int(FSK_AX25_1200_BAUD_1000Hz); break;
-    case 7: init_fsk_demod_int(FSK_AX25_9600_BAUD); break;
-	case 8: init_fsk_demod_int(FSK_SITORB_100_BAUD); break;
+    case 1: init_fsk_demod_float(FSK_RTTY_45_BAUD_170Hz); break;
+    case 2: init_fsk_demod_float(FSK_RTTY_50_BAUD_85Hz); break;
+    case 3: init_fsk_demod_float(FSK_RTTY_50_BAUD_450Hz); break;
+    case 4: init_fsk_demod_float(FSK_EFR_200_BAUD_340Hz); break;
+    case 5: init_fsk_demod_float(FSK_ASCII_300_BAUD_850Hz); break;
+    case 6: init_fsk_demod_float(FSK_AX25_1200_BAUD_1000Hz); break;
+    case 7: init_fsk_demod_float(FSK_AX25_9600_BAUD); break;
+    case 8: init_fsk_demod_float(FSK_SITORB_100_BAUD); break;
     }
 }
 
@@ -102,7 +115,9 @@ int main(int argc, char* argv[])
     }
 
     initialize_audiostream();
-    init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);
+    //init_fsk_demod_int(FSK_RTTY_45_BAUD_170Hz);       // <-- int - Version
+	init_fsk_demod_float(FSK_RTTY_45_BAUD_170Hz);       // <-- float - Version
+
 
     while (1)
     {

@@ -7,12 +7,11 @@
 #include <windows.h>
 #include <string.h>
 #include "config.h"
-//#include "fsk_demod_float.h"              // <-- nicht lˆschen
-#include "fsk_demod_int.h"
+#include "fsk_demod_float.h"              // <-- nicht l√∂schen
+//#include "fsk_demod_int.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
-//#define DATA_RATE 1200
-#define nco_inc  2 * (float)M_PI * DATA_RATE / SAMPLING_RATE
+
 
 volatile float nco_phase = 0.0f;
 volatile float sample = 0.0f;
@@ -39,13 +38,16 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer, unsigned l
 
     for (unsigned long i = 0; i < framesPerBuffer; i++)
     {
-		//output[i * 2] = input[i];         // Linker Kanal Debugging    <-- nicht lˆschen
-		//output[i * 2 + 1] = input[i];     // Rechter Kanal Debugging   <-- nicht lˆschen
+        //if (output)
+        //{
+        //    output[i * 2] = input[i];         // Linker Kanal Debugging    <-- nicht l√∂schen
+        //    output[i * 2 + 1] = input[i];     // Rechter Kanal Debugging   <-- nicht l√∂schen
+        //}
 
-        int32_t sample_q31 = float_to_q31(input[i] );
-		FskAmplitudes amp = smDemod_int(sample_q31);   // FSK-Demodulation int32-Version
+        // int32_t sample_q31 = float_to_q31(input[i] );  // <-- nicht l√∂schen
+		// FskAmplitudes amp = smDemod_int(sample_q31);   // FSK-Demodulation int32-Version <-- nicht l√∂schen
 
-        //FskAmplitudes amp = smDemod_float(input[i]);   // FSK-Demodulation float-Version  <-- nicht lˆschen
+        FskAmplitudes amp = smDemod_float(input[i]);      // FSK-Demodulation float-Version  <-- nicht l√∂schen
 
         if (output)
         {
@@ -66,7 +68,7 @@ int initialize_audiostream()
         return 1;
     }
 
-    // Ger‰teinformationen abrufen
+    // Ger√§teinformationen abrufen
     int numDevices = Pa_GetDeviceCount();
     if (numDevices < 0)
     {
@@ -75,14 +77,14 @@ int initialize_audiostream()
         return 1;
     }
 
-    //printf("Verfuegbare Geraete:\n");                                                             //<-- nicht lˆschen
-    //for (int i = 0; i < numDevices; i++)                                                          //<-- nicht lˆschen
-    //{                                                                                             //<-- nicht lˆschen
-    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);                                     //<-- nicht lˆschen
-    //    if (!deviceInfo) continue;                                                                //<-- nicht lˆschen
-    //    printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",                         //<-- nicht lˆschen
-    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);    //<-- nicht lˆschen
-    //}                                                                                             //<-- nicht lˆschen
+    //printf("Verfuegbare Geraete:\n");                                                             //<-- nicht l√∂schen
+    //for (int i = 0; i < numDevices; i++)                                                          //<-- nicht l√∂schen
+    //{                                                                                             //<-- nicht l√∂schen
+    //    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(i);                                     //<-- nicht l√∂schen
+    //    if (!deviceInfo) continue;                                                                //<-- nicht l√∂schen
+    //    printf("[%d] Name: %s, Eingabekanaele: %d, Ausgabekanaele: %d\n",                         //<-- nicht l√∂schen
+    //        i, deviceInfo->name, deviceInfo->maxInputChannels, deviceInfo->maxOutputChannels);    //<-- nicht l√∂schen
+    //}                                                                                             //<-- nicht l√∂schen
 
     // Default-Devices initialisieren (sicherer Startpunkt)
     int inputDevice = Pa_GetDefaultInputDevice();
@@ -99,7 +101,7 @@ int initialize_audiostream()
         const char* name = di->name;
         if (name == NULL) continue;
 
-        // einfache, robuste Pr¸fung auf "USB" (groﬂ/klein egal)
+        // einfache, robuste Pr√ºfung auf "USB" (gro√ü/klein egal)
         if (strstr(name, "USB") || strstr(name, "usb"))
         {
             if (di->maxInputChannels > 0 && usbInput < 0) usbInput = i;
@@ -107,11 +109,11 @@ int initialize_audiostream()
         }
     }
 
-    // Wenn USB-Ger‰te gefunden wurden, bevorzugen (¸berschreibt Default)
+    // Wenn USB-Ger√§te gefunden wurden, bevorzugen (√ºberschreibt Default)
     if (usbInput >= 0) inputDevice = usbInput;
     if (usbOutput >= 0) outputDevice = usbOutput;
 
-    // Falls kein Default bzw. USB-Device vorhanden: Fallback auf erstes geeignetes Ger‰t
+    // Falls kein Default bzw. USB-Device vorhanden: Fallback auf erstes geeignetes Ger√§t
     if (inputDevice == paNoDevice || inputDevice < 0)
     {
         inputDevice = -1;
@@ -177,7 +179,7 @@ int initialize_audiostream()
     outputParameters.suggestedLatency = outInfo ? outInfo->defaultLowOutputLatency : 0.05;
     outputParameters.hostApiSpecificStreamInfo = NULL;
 
-    // Pr¸fen ob das Format unterst¸tzt wird
+    // Pr√ºfen ob das Format unterst√ºtzt wird
     err = Pa_IsFormatSupported(&inputParameters, &outputParameters, (double)SAMPLING_RATE);
     if (err != paNoError)
     {
@@ -190,7 +192,7 @@ int initialize_audiostream()
         return 1;
     }
 
-    // Stream ˆffnen
+    // Stream √∂ffnen
     err = Pa_OpenStream(&stream, &inputParameters, &outputParameters, SAMPLING_RATE, FRAMES_PER_BUFFER, paClipOff, audioCallback, NULL);
 
     if (err != paNoError)
@@ -206,8 +208,8 @@ int initialize_audiostream()
     if (streamInfo)
     {
         printf("Tatsaechliche Samplerate:       %.1f Hz\n", streamInfo->sampleRate);
-        //printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);        //<-- nicht lˆschen
-        //printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);       //<-- nicht lˆschen
+        //printf("Input Latenz:                  %.3f ms\n", streamInfo->inputLatency * 1000.0);        //<-- nicht l√∂schen
+        //printf("Output Latenz:                 %.3f ms\n", streamInfo->outputLatency * 1000.0);       //<-- nicht l√∂schen
     }
 
     // Stream starten

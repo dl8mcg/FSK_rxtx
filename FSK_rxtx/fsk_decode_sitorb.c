@@ -1,5 +1,5 @@
 /*
-*   by dl8mcg Jan. 2025 to June 2026       2FSK - SITORB / NAVTEX - Decoder
+*   by dl8mcg + claude Jan. 2025 to June 2026       2FSK - SITORB / NAVTEX - Decoder
 */
 
 /*
@@ -29,7 +29,7 @@
  *   4. After lock: collects RX and DX characters, emits FEC pairs (error correction):
  *      - Both valid & equal → output character, high confidence (quality=2).
  *      - One valid → output that character, medium confidence (quality=1).
- *      - Both invalid but recoverable (Hamming-1) → attempt error correction.
+ *      - Both invalid: bitweise Kombination beider Kopien, nur wenn eindeutig (siehe combine_invalid_pair).
  *      - Unrecoverable → output '*', no confidence (quality=0).
  *   5. Re-sync on bad_pairs ≥ SITORB_BAD_PAIRS_TO_RESYNC (quality=0 accumulates).
  *
@@ -42,7 +42,10 @@
  *   (pattern repeats, 5-slot FEC window)
  *
  * Error handling:
- *   - Hamming-1 correction: single bit errors corrected via table lookup.
+ *   - KEINE Hamming-1-Korrektur: CCIR 476 ist ein 4-aus-7-Code (alle 35 Wörter mit genau vier 1-Bits
+ *     sind gültig, Mindestabstand 2). Ein Einzelbitfehler wird erkannt, ist aber NICHT eindeutig
+ *     korrigierbar (4 bzw. 5 gleich nahe Kandidaten). Ungültige Wörter gelten als Auslöschung;
+ *     die Korrektur kommt aus der zweiten Kopie (Zeitdiversity DX/RX).
  *   - Quality tracking: maintains bad_pairs counter (incremented on mismatches).
  *   - Drop-sync: if bad_pairs ≥ threshold, resync automatically.
  *
@@ -56,11 +59,11 @@
  */
 
 
-/* 
- * NBDP‑Telex‑Terminologie (NBDP = Narrow‑Band Direct Printing) :
- * RX : Receive Copy
- * DX : Duplex Copy / Second Copy
- */
+ /*
+  * NBDP-Telex-Terminologie (NBDP = Narrow-Band Direct Printing) :
+  * RX : Receive Copy
+  * DX : Duplex Copy / Second Copy
+  */
 
 #include <stdint.h>
 #include <string.h>
@@ -72,10 +75,11 @@
 
 #define SITORB_SYNC_CHARS 4u
 #define SITORB_BAD_PAIRS_TO_RESYNC 12u
+#define SITORB_PHASE_CONFLICTS_TO_RESYNC 2u     // aufeinanderfolgende Phasing-Zeichen auf falscher Position bis Neu-Phasing
 #define SITORB_FASTSYNC_SCORE_TO_LOCK 8u        // erforderliche Lock-Schwelle
 #define SITORB_FASTSYNC_SCORE_MAX 32u           // Maximalwert für die die Wahrscheinlichkeit eines Fast-Locks 
 
- /* Codes are packed in transmitted order: first received bit is bit 6. */
+  /* Codes are packed in transmitted order: first received bit is bit 6. */
 #define CODE_PHASING_1 0x78u /* BBBBYYY, RX position */
 #define CODE_PHASING_2 0x33u /* YBBYYBB, DX position */
 #define CODE_IDLE_BETA 0x66u /* BBYYBBY */
@@ -146,72 +150,14 @@ typedef struct
     uint8_t next_is_dx;
     uint8_t letters_shift;
     uint8_t bad_pairs;
-    uint32_t slot;
+    uint8_t phase_conflicts;
+    uint8_t slot;            // zählt modulo 5 (Position im 5-Slot-FEC-Fenster)
     sync_trial_t trial[4][7];
     fast_sync_trial_t fast_trial[4][7];
     pending_char_t pending[5];
 } sitorb_state_t;
 
 static sitorb_state_t sitorb;
-
-/* ------------------------
-   Hilfsfunktionen zur Rettung verlorener Zeichen (Hamming‑1)   <-- coilot
-   ------------------------ */
-
-/* Zähle 1-Bits in 7-bit XOR (einfacher popcount) */
-static int hamming7(uint8_t a, uint8_t b)
-{
-    uint8_t x = (uint8_t)((a ^ b) & 0x7Fu);
-    int cnt = 0;
-    while (x)
-    {
-        cnt += (x & 1u);
-        x >>= 1;
-    }
-    return cnt;
-}
-
-/* Suche einen Tabellen‑Code innerhalb maximaler Hamming‑Distanz.
-   Liefert den Tabellen‑code oder -1 wenn keiner gefunden. */
-static int find_closest_ccir_code(uint8_t raw, int maxdist)
-{
-    int best_idx = -1;
-    int best_d = 8;
-    uint8_t r = raw & 0x7Fu;
-    for (unsigned i = 0; i < sizeof(ccir476_table) / sizeof(ccir476_table[0]); ++i)
-    {
-        uint8_t tc = (uint8_t)(ccir476_table[i].code & 0x7Fu);
-        int d = hamming7(r, tc);
-        if (d < best_d)
-        {
-            best_d = d;
-            best_idx = (int)i;
-            if (best_d == 0) break;
-        }
-    }
-    if (best_idx >= 0 && best_d <= maxdist)
-        return (int)(ccir476_table[best_idx].code & 0x7Fu);
-    return -1;
-}
-
-/* Wenn ein Code als ungültig erkannt wurde, versuche eine Korrektur
-   auf einen Tabellen‑Code mit Hamming‑Distanz ≤ 1. */
-static uint8_t correct_if_close(uint8_t code, uint8_t* valid)
-{
-    if (valid && *valid) return code;
-    int c = find_closest_ccir_code(code, 1);
-    if (c >= 0)
-    {
-        if (valid) *valid = 1u;
-        return (uint8_t)c;
-    }
-    return code;
-}
-
-/* ------------------------
-   Ende Hilfsfunktionen
-   ------------------------ */
-
 
 static uint8_t reverse7(uint8_t x)
 {
@@ -282,6 +228,34 @@ static int is_sitor_code(uint8_t code)
     return has_four_one_bits(code);
 }
 
+static int popcount7(uint8_t x)
+{
+    int n = 0;
+    x &= 0x7fu;
+    while (x) { n += (x & 1u); x >>= 1; }
+    return n;
+}
+
+/*
+ * Beide Kopien ungültig (Gewicht 3 oder 5 = ungerade Bitfehlerzahl, meist genau 1 Fehler).
+ * Eindeutig rekonstruierbar nur, wenn beide Kopien denselben Fehlertyp an verschiedenen Stellen haben:
+ *   - beide Gewicht 3 (je eine 1 verloren):  Original = ODER beider Kopien
+ *   - beide Gewicht 5 (je eine 1 dazu):      Original = UND beider Kopien
+ * Sonst bleibt es mehrdeutig -> -1.
+ */
+static int combine_invalid_pair(uint8_t a, uint8_t b)
+{
+    int wa = popcount7(a), wb = popcount7(b);
+    uint8_t t;
+
+    if (wa == 3 && wb == 3)      t = (uint8_t)((a | b) & 0x7fu);
+    else if (wa == 5 && wb == 5) t = (uint8_t)(a & b & 0x7fu);
+    else return -1;
+
+    if (popcount7(t) == 4 && is_traffic_code(t)) return (int)t;
+    return -1;
+}
+
 static void clear_pending(void)
 {
     memset(sitorb.pending, 0, sizeof(sitorb.pending));
@@ -343,10 +317,7 @@ static void emit_code(uint8_t code)
 
 static uint8_t emit_fec_pair(uint8_t dx_valid, uint8_t dx_code, uint8_t rx_valid, uint8_t rx_code)
 {
-    /* Versuche Korrektur auf Hamming‑Distanz 1 falls eine Seite ungültig ist. */
-    dx_code = correct_if_close(dx_code, &dx_valid);
-    rx_code = correct_if_close(rx_code, &rx_valid);
-
+    /* Ungültige Wörter NICHT "korrigieren": die andere Kopie ist die Korrektur. */
     if (dx_valid && rx_valid)
     {
         if (dx_code == rx_code)
@@ -354,41 +325,34 @@ static uint8_t emit_fec_pair(uint8_t dx_valid, uint8_t dx_code, uint8_t rx_valid
             emit_code(dx_code);
             return 2u;
         }
-        else
-        {
-            /* beide gültig, aber unterschiedlich -> keine sichere Korrektur */
-            SITORB_PUTC('*');
-            return 0u;
-        }
+        /* beide gültig, aber verschieden (>= 2 Bitfehler in einer Kopie) -> unsicher */
+        SITORB_PUTC('*');
+        return 0u;
     }
-    else if (dx_valid)
+
+    if (dx_valid)
     {
         emit_code(dx_code);
         return 1u;
     }
-    else if (rx_valid)
+
+    if (rx_valid)
     {
         emit_code(rx_code);
         return 1u;
     }
-    else
+
     {
-        /* Beide ungültig: probiere, ob einer durch Hamming‑1 gerettet werden kann */
-        int cdx = find_closest_ccir_code(dx_code, 1);
-        int crx = find_closest_ccir_code(rx_code, 1);
-        if (cdx >= 0)
+        int c = combine_invalid_pair(dx_code, rx_code);
+        if (c >= 0)
         {
-            emit_code((uint8_t)cdx);
+            emit_code((uint8_t)c);
             return 1u;
         }
-        if (crx >= 0)
-        {
-            emit_code((uint8_t)crx);
-            return 1u;
-        }
-        SITORB_PUTC('*');
-        return 0u;
     }
+
+    SITORB_PUTC('*');
+    return 0u;
 }
 
 static void note_fec_quality(uint8_t quality)
@@ -421,26 +385,48 @@ static void note_fec_quality(uint8_t quality)
 static void handle_character(uint8_t code)
 {
     uint8_t is_dx = sitorb.next_is_dx;
-    uint8_t idx = (uint8_t)(sitorb.slot % 5u);
+    uint8_t idx = sitorb.slot;
     uint8_t valid = (uint8_t)is_traffic_code(code);
 
     sitorb.next_is_dx ^= 1u;
-    sitorb.slot++;
+    sitorb.slot = (uint8_t)((sitorb.slot + 1u) % 5u);
 
-    if (is_phasing(code))
+    if (is_phasing(code) || code == CODE_IDLE_BETA)
     {
-        clear_pending();
-        sitorb.bad_pairs = 0u;
-        sitorb.slot = 0u;
-        sitorb.next_is_dx = (code == CODE_PHASING_1) ? 1u : 0u;
+        /*
+         * Service-Zeichen sind keine Nutzdaten. Ein einzelnes solches Zeichen darf nicht den
+         * ganzen Zustand zurücksetzen: Zwei-Bit-Fehler machen aus jedem Datenzeichen mit
+         * merklicher Wahrscheinlichkeit einen dieser Codes. Nur wenn Phasing-Zeichen
+         * wiederholt auf der falschen Position (RX/DX) liegen, wird neu phasiert.
+         */
+        uint8_t position_ok = 1u;
+        if (code == CODE_PHASING_1)      position_ok = (uint8_t)(is_dx ? 0u : 1u);   /* 0x78 -> RX-Position */
+        else if (code == CODE_PHASING_2) position_ok = (uint8_t)(is_dx ? 1u : 0u);   /* 0x33 -> DX-Position */
+
+        sitorb.pending[idx].have = 0u;
+
+        if (position_ok)
+        {
+            sitorb.phase_conflicts = 0u;
+            if (is_phasing(code))
+            {
+                sitorb.bad_pairs = 0u;
+            }
+            return;
+        }
+
+        if (++sitorb.phase_conflicts >= SITORB_PHASE_CONFLICTS_TO_RESYNC)
+        {
+            clear_pending();
+            sitorb.bad_pairs = 0u;
+            sitorb.slot = 0u;
+            sitorb.phase_conflicts = 0u;
+            sitorb.next_is_dx = (code == CODE_PHASING_1) ? 1u : 0u;
+        }
         return;
     }
 
-    if (code == CODE_IDLE_BETA)
-    {
-        clear_pending();
-        return;
-    }
+    sitorb.phase_conflicts = 0u;
 
     if (is_dx)
     {
@@ -461,20 +447,14 @@ static void handle_character(uint8_t code)
         }
         else
         {
-            /* Keine pending-DX vorhanden: wenn code gültig ausgeben,
-               ansonsten versuchen wir eine Hamming‑1‑Korrektur und
-               geben das korrigierte Zeichen aus, falls möglich. */
+            /* Keine DX-Kopie vorhanden (z.B. kurz nach dem Sync): nur gültige Zeichen ausgeben. */
             if (valid)
             {
                 emit_code(code);
             }
             else
             {
-                int c = find_closest_ccir_code(code, 1);
-                if (c >= 0)
-                {
-                    emit_code((uint8_t)c);
-                }
+                SITORB_PUTC('*');
             }
         }
     }
@@ -489,6 +469,7 @@ static void acquire_sync(uint8_t variant, uint8_t last_phasing_code)
     sitorb.slot = 0u;
     sitorb.letters_shift = 1u;
     sitorb.bad_pairs = 0u;
+    sitorb.phase_conflicts = 0u;
     clear_pending();
 
     /*
@@ -507,9 +488,10 @@ static void acquire_fast_sync(uint8_t variant)
     sitorb.slot = 0u;
     sitorb.letters_shift = 1u;
     sitorb.bad_pairs = 0u;
+    sitorb.phase_conflicts = 0u;
     clear_pending();
 
-    // Reset der Fast‑Sync Scores für alle Varianten und Phasen,
+    // Reset der Fast-Sync Scores für alle Varianten und Phasen,
     // damit keine verbliebenen Scores sofort wieder ein Lock auslösen.
     for (int v = 0; v < 4; ++v)   // <-- copilot
     {
@@ -590,7 +572,7 @@ static int update_fast_sync_trial(fast_sync_trial_t* trial, uint8_t code)
     {
         trial->have++;
     }
-    trial->slot++;
+    trial->slot = (uint8_t)((trial->slot + 1u) % 10u);   // modulo 10: Parität und mod-5-Index bleiben konsistent
 
     return lock;
 }
@@ -687,4 +669,26 @@ void process_sitorb(uint8_t bit)
     sitorb.current_raw = 0u;
     handle_character(code);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

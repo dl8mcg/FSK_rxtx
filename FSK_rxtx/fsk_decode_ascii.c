@@ -12,7 +12,7 @@ static uint8_t rxbyte = 0;              // shift-in register
 static uint8_t bit_count = 0;
 static uint8_t bit_buffer = 0;
 
-// Funktionszeiger für Zustandsmaschine
+// Funktionszeiger fÃ¼r Zustandsmaschine
 static void state1();
 static void state2();
 static void state3();
@@ -48,24 +48,24 @@ static void state2()                    // Datenerfassung
     }
 }
 
-static void state3()                    // Prüfung des ersten Stopp-Bits
+static void state3()                    // PrÃ¼fung des ersten Stopp-Bits
 {
     if (rxbit == 1)                     // Erstes Stopp-Bit korrekt
     {
         smAscii = state4;
     }
-    else                                // Fehler, zurücksetzen
+    else                                // Fehler, zurÃ¼cksetzen
     {
         smAscii = state1;
     }
 }
 
-static void state4()                    // Prüfung des zweiten Stopp-Bits
+static void state4()                    // PrÃ¼fung des zweiten Stopp-Bits
 {
     if (rxbit == 1)                     // Zweites Stopp-Bit korrekt
     {
         writebuf(bit_buffer);
     }
-    smAscii = state1;                   // Zurücksetzen für nächstes Zeichen
+    smAscii = state1;                   // ZurÃ¼cksetzen fÃ¼r nÃ¤chstes Zeichen
 }
 

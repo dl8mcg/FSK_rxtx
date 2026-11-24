@@ -534,6 +534,8 @@ void init_fsk_demod_int(FskMode mode)
 {
     double flow = 1.0;
     double fhigh = 2.0;
+    
+    inverse_fsk = false;
 
     switch (mode)
     {
@@ -615,12 +617,12 @@ void init_fsk_demod_int(FskMode mode)
         init_filter_100bd_170sh();
         smDemod_int = process_fsk_demod_center_nco_int;
         baud_rate = 100.0f;
-        flow = 900 - 170.0/2;
-        fhigh = 900 + 170.0/2;
+        flow = 1500 - 170.0/2;
+        fhigh = 1500 + 170.0/2;
         inverse_fsk = false;
         sitorb_reset();
         smDecoding = process_sitorb;
-        wprintf(L"\n\nModus FSK_SITORB_100_BAUD  %g Hz / %g Hz   f = 490 kHz, 518 kHz, 4209.5 kHz, 12579 kHz    set rx to f - 900 Hz USB\n\n", flow, fhigh);
+        wprintf(L"\n\nModus FSK_SITORB_100_BAUD  %g Hz / %g Hz   f = 490 kHz, 518 kHz, 4209.5 kHz, 12579 kHz    set rx to f - 1500 Hz USB\n\n", flow, fhigh);
         break;
 
     default:
